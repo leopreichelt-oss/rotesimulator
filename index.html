@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+<meta charset="UTF-8">
+<title>ROTE Planner by Leo Reichelt</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header>
+<label>PG Guilda <input id="guildGP" value="326610750"></label>
+<label>Jogadores <input id="players" value="41"></label>
+<label>Inativos <input id="inactive" value="2"></label>
+<label>Margem segurança <input id="safe" value="3"></label>
+<label>Crescimento diário/jogador <input id="dailyGrowth" type="number" value="5500"></label>
+
+<div id="gpProjectionInfo"></div>
+
+<div>
+PG ativo mínimo
+<div id="activeGPmin">0</div>
+</div>
+
+<div>
+PG ativo máximo
+<div id="activeGPmax">0</div>
+</div>
+
+<div class="starCounter" id="starResult"></div>
+
+<button onclick="handleBriefing(); generateOfficerBriefing();">
+Briefing para oficiais
+</button>
+<div id="roteHistoryPanel"></div>
+</header>
+
+<div class="container">
+
+  <div class="left">
+    <h3>Fases</h3>
+    <div id="phaseList"></div>
+  </div>
+
+  <div class="map">
+    <div id="galaxyMap">
+      <img src="assets/rote-map.png" id="roteMap">
+      <div id="planetInfoBox" class="planetInfoBox hidden"></div>
+      <div id="planetLayer"></div>
+
+      <div id="planetFloatBox">
+        <span id="planetFloatClose" onclick="closePlanetFloat()">✕</span>
+        <h3 id="planetFloatName">Planeta</h3>
+
+        <label>Fase
+          <select id="planetPhase">
+            <option value="">—</option>
+            <option value="1">F1</option>
+            <option value="2">F2</option>
+            <option value="3">F3</option>
+            <option value="4">F4</option>
+            <option value="5">F5</option>
+            <option value="6">F6</option>
+          </select>
+        </label>
+
+        <label>Batalhas possíveis
+          <input id="possibleBattles" type="number">
+        </label>
+
+        <label>Platoons
+          <input id="platoons" type="number" min="0" max="6">
+        </label>
+
+        <label id="specialMissionBox" style="display:none">
+          Missão especial
+          <input type="checkbox" id="specialMissionToggle">
+        </label>
+
+        <button onclick="savePlanet()">Salvar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="right" style="display:none">
+    <h3 id="planetName">Planeta</h3>
+  </div>
+
+</div>
+
+<script src="data/rewards.js"></script>
+<script src="data/planetData.js"></script>
+<script src="data/planetPositions.js"></script>
+
+<script src="utils/format.js"></script>
+<script src="utils/phaseUtils.js"></script>
+
+<script src="state/state.js"></script>
+<script src="state/persistence.js"></script>
+<script src="state/history.js"></script>
+
+<script src="core/gpEngine.js"></script>
+<script src="core/planetEngine.js"></script>
+<script src="core/phaseEngine.js"></script>
+<script src="core/starOptimizer.js"></script>
+<script src="core/strategyEngine.js"></script>
+<script src="core/calculations.js"></script>
+
+<script src="ui/drawPlanetList.js"></script>
+<script src="ui/drawGalaxyMap.js"></script>
+<script src="ui/drawPhaseList.js"></script>
+<script src="ui/handlers.js"></script>
+
+<script src="ui/briefings.js"></script>
+<script src="ui/phaseGuide.js"></script>
+<script src="app.js"></script>
+</html>

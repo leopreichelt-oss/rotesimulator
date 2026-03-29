@@ -1,0 +1,154 @@
+[25/03/26 11:15]
+
+Correção: Cálculo de battles baseado em necessidade real
+
+Problema:
+Battles zeravam ou ficavam travadas em safeBattles
+
+Causa:
+Uso incorreto de GP dentro do baseScore + dependência de estrelas
+
+Correção:
+- Removido GP do baseScore inicial
+- Battles agora calculadas com base em:
+  gpNeeded / activeGP
+- Aplicação de safeBattles como limite
+
+Impacto:
+- Battles agora refletem comportamento real da guilda
+- Score e carry passam a ser confiáveis
+
+Status:
+VALIDADO
+
+[26/03/2619:43]
+Arquivo: phaseEngine.js
+Função: distributeCarry()
+
+Problema: Filtro incorreto descartava planetas válidos da próxima fase.
+Bloco antigo de distribuição igualitária ficou solto fora da função causando
+ReferenceError: totalCarry is not defined.
+
+Correção:
+- Reescrita completa da função distributeCarry()
+- Distribuição agora é proporcional ao threshold de star1 de cada planeta
+- Teto de carry por planeta = star1 - 3.000.000 (STAR_BUFFER)
+- Carry excedente ao teto é propagado para fase N+2
+- Removido bloco solto com referência inválida a totalCarry
+
+Status: Testado e funcionando nas fases 1 e 2.
+[TAREFAS 4-9 CONCLUÍDAS]
+
+[TAREFA 4 - Batalhas no nível da fase]
+Arquivo: phaseEngine.js
+Correção: cálculo de batalhas movido para nível da fase.
+GP necessário = star3 total - carryIn - platoons.
+Percentual aplicado sobre batalhas totais da fase.
+Resultado distribuído igualmente entre planetas.
+
+Arquivo: planetEngine.js
+Correção: removido recálculo interno de batalhas.
+planetEngine agora retorna battleScore zerado,
+valores corretos são injetados pelo phaseEngine.
+
+[TAREFA 5 - Aviso carryMin > carryMax]
+Arquivo: drawPhaseList.js
+Adicionado aviso quando carryMin > carryMax explicando
+que a guilda pode bater 5★ sem atingir 6★.
+
+[TAREFA 6 - Estrelas no cabeçalho da fase]
+Arquivo: drawPhaseList.js
+Estrelas calculadas dinamicamente (soma dos planetas da fase).
+Exibidas como fração (ex: ★★★ – ★★★★★★) em dourado.
+
+[TAREFA 7 - Aviso de crescimento necessário]
+Arquivo: phaseEngine.js + drawPhaseList.js
+Adicionado cálculo de starGapMin baseado no scoreMin.
+Aviso em vermelho quando cenário pessimista não bate 6★.
+
+[TAREFA 8 - Nome dos planetas no cabeçalho]
+Arquivo: drawPhaseList.js
+Nomes dos planetas objetivo exibidos ao lado do número da fase
+em azul (#4da6ff).
+[BACKUP PONTO DE CONTROLE]
+Status atual:
+- Motor de cálculo validado (fases 1-6)
+- Carry distribuído corretamente entre fases
+- Batalhas calculadas no nível da fase
+- GP distribuído proporcional ao gap para star3
+- UI: estrelas em dourado, nomes de planetas em azul
+- UI: avisos de carry inconsistente e crescimento necessário
+- Página recarrega sempre limpa
+
+[TAREFA PENDENTE - Sistema de histórico]
+Implementar fluxo completo:
+1. Briefing cria snapshot (descarta anterior se F6 vazia)
+2. Resultado real atualiza evento atual automaticamente
+3. Botão "Atual" carrega evento em andamento (editável)
+4. Botões de data = somente leitura
+Arquivos envolvidos: history.js, handlers.js, persistence.js
+
+[SISTEMA DE HISTÓRICO - CONCLUÍDO]
+Arquivos: history.js, handlers.js, app.js, drawPhaseList.js
+
+- Briefing cria snapshot do evento (descarta anterior se F6 vazia)
+- Resultado real salvo automaticamente fase a fase
+- F6 preenchida fecha o evento
+- Botão "Atual" restaura evento em andamento (editável)
+- Botões de data = somente leitura
+- Página recarrega sempre limpa
+- drawROTEHistory duplicado removido do handlers.js
+
+[28/03/2026]
+Item 6 — Contagem regressiva automática + projeção de GP
+
+Arquivo: phaseUtils.js
+
+- Removida dependência do campo manual eventStart
+- Âncora fixa: 30/03/2026 14h BRT (ciclos de 14 dias, segunda-feira)
+- Duração do evento: 6 dias
+- getNextEventStart() — calcula próximo início automaticamente
+- getCurrentEventStart() — detecta se evento está em andamento
+- getEventStatus() — retorna "before" ou "during"
+- GP projetado = GP atual + dias até evento × crescimento diário × jogadores ativos
+- Durante evento: mostra fase aproximada e dias restantes
+- Antes do evento: mostra data, dias e GP projetado com ganho
+
+Arquivo: index.html
+- Removido campo eventStart
+- Adicionado campo dailyGrowth (padrão 5500/jogador, editável)
+
+Arquivo: handlers.js
+- Removido listener de eventStart
+- Mantido listener de dailyGrowth + chamada updateGPProjectionDisplay()
+[28/03/2026]
+Item 6 — UI do contador de evento
+
+Arquivos: style.css, phaseUtils.js
+
+- GP ativo min/max exibido em azul (#4da6ff)
+- Contador de evento com 5 estados visuais:
+  • Padrão (>2 dias): cinza — data e GP projetado
+  • Em breve (≤2 dias): laranja — alerta de proximidade
+  • Crítico (<12h): vermelho piscando — alerta urgente
+  • Durante: azul — fase atual e dias restantes
+  • Encerrado: verde — confirma fim e mostra próximo
+
+[28/03/2026]
+Item 6 — Contagem regressiva automática + projeção de GP
+
+Arquivos: phaseUtils.js, handlers.js, app.js, index.html, style.css
+
+- Calendário do evento calculado automaticamente (âncora 30/03/2026 14h BRT)
+- Ciclos de 14 dias, duração de 6 dias, sempre segunda-feira
+- 5 estados visuais do contador:
+  • Padrão (>2 dias): cinza
+  • Em breve (≤2 dias): laranja
+  • Crítico (<12h): vermelho piscando
+  • Durante: azul com fase atual e dias restantes
+  • Encerrado: verde
+- GP projetado = GP atual + dias até evento × crescimento diário × jogadores ativos
+- Campo dailyGrowth adicionado (padrão 5500/jogador, editável)
+- GP projetado sempre em azul (#4da6ff)
+- GP ativo min/max em azul
+- applyGPProjection removida do onload para não sobrescrever loadSt

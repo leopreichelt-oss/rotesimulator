@@ -1,0 +1,401 @@
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white
+}
+
+header{
+background:#1e293b;
+padding:10px;
+display:flex;
+gap:20px;
+flex-wrap:wrap;
+align-items:center
+}
+
+.container{
+display:grid;
+grid-template-columns:260px minmax(0,1fr) 260px;
+align-items:start;
+}
+
+.left{
+background:#1e293b;
+padding:10px;
+overflow:auto;
+border-right:2px solid #334155
+}
+
+.map{
+padding:10px;
+display:flex;
+justify-content:center;
+align-items:center;
+min-width:0;
+}
+
+.phase{
+border:1px solid #334155;
+margin-bottom:15px;
+border-radius:8px;
+padding:10px
+}
+
+.phaseTitle{
+font-weight:bold;
+margin-bottom:10px
+}
+
+.phaseGrid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:10px
+}
+
+.planetBox{
+background:#334155;
+padding:10px;
+border-radius:6px;
+cursor:pointer;
+font-size:12px;
+line-height:1.4em
+}
+
+.yellow{
+background:#665c00
+}
+
+.right{
+background:#1e293b;
+padding:10px;
+border-left:2px solid #334155;
+min-width:240px;
+}
+
+input,select{
+width:100%;
+margin-bottom:8px
+}
+
+.starCounter{
+font-size:18px;
+font-weight:bold;
+color:#ffd700;
+margin-left:auto;
+padding:4px 10px;
+background:#020617;
+border-radius:6px;
+border:1px solid #475569;
+}
+#galaxyMap{
+position:relative;
+}
+
+#planetLayer{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+}
+
+#roteMap{
+width:100%;
+max-width:100%;
+height:auto;
+display:block;
+}
+
+#planetLayer{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%
+}
+
+.planetNode{
+width:32px;
+height:32px;
+background:#1e293b;
+border:3px solid #94a3b8;
+}
+
+.planetNode{
+position:absolute;
+width:64px;
+height:64px;
+border-radius:50%;
+background:#1e293b;
+border:3px solid #94a3b8;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:11px;
+font-weight:bold;
+cursor:pointer;
+transform:translate(-50%,-50%);
+text-align:center;
+padding:4px;
+line-height:1.1;
+}
+
+.planetStars{
+position:absolute;
+top:68px;
+left:50%;
+transform:translateX(-50%);
+font-size:14px;
+color:gold;
+pointer-events:none;
+}
+
+.star{
+margin:0 1px;
+}
+.planetInfoBox{
+
+position:absolute;
+
+background:#1e293b;
+border:1px solid #475569;
+
+padding:12px;
+
+border-radius:6px;
+
+font-size:13px;
+
+min-width:200px;
+
+z-index:10;
+}
+
+.hidden{
+display:none;
+}
+
+.starContainer{
+position:absolute;
+top:50px;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+gap:2px;
+pointer-events:none;
+}
+
+.star.gold{
+color:gold;
+text-shadow:0 0 6px gold, 0 0 2px white;
+}
+
+.star.empty{
+color:#94a3b8;
+opacity:0.7;
+}
+
+.planet0{ border:3px solid #64748b; }
+.planet1{ border:3px solid #22c55e; }
+.planet2{ border:3px solid #facc15; }
+.planet3{ border:3px solid #a855f7; }
+.planet4{ border:3px solid #3b82f6; }
+.planet5{ border:3px solid #f97316; }
+.planet6{ border:3px solid #ec4899; }
+
+.planetSelected{
+border:3px solid gold;
+box-shadow:0 0 12px gold;
+}
+.planetLocked{
+opacity:0.25;
+filter:grayscale(100%);
+pointer-events:none;
+}
+.phaseBox{
+padding:8px;
+margin-bottom:8px;
+line-height:1.25;
+}
+
+.phaseTitle{
+font-weight:bold;
+margin-bottom:5px;
+}
+
+#roteHistoryPanel{
+display:flex;
+gap:6px;
+margin-left:10px;
+}
+
+#roteHistoryPanel button{
+padding:3px 8px;
+font-size:12px;
+cursor:pointer;
+background:#475569;
+color:white;
+border:1px solid #64748b;
+border-radius:4px;
+}
+
+#roteHistoryPanel button:hover{
+background:#64748b;
+}
+#roteHistoryPanel{
+display:flex;
+gap:6px;
+margin-left:10px;
+position:relative;
+z-index:10;
+}
+header{
+position:relative;
+z-index:20;
+}
+.phaseHeader{
+display:flex;
+justify-content:space-between;
+font-weight:bold;
+margin-bottom:4px;
+}
+
+.phaseCarry{
+font-size:13px;
+margin-bottom:6px;
+}
+
+.phaseActions{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-top:6px;
+}
+
+.phaseToggle{
+cursor:pointer;
+font-size:11px;
+color:#94a3b8;
+}
+
+.phaseToggle:hover{
+color:white;
+}
+
+.phaseDetails{
+margin-top:6px;
+font-size:11px;
+line-height:1.3;
+}
+
+.hidden{
+display:none;
+}
+.carryPositive{
+color:#4ade80;
+font-weight:bold;
+}
+
+.carryNegative{
+color:#f87171;
+font-weight:bold;
+}
+/* Box flutuante de planeta */
+#planetFloatBox{
+position:absolute;
+background:#1e293b;
+border:1px solid #475569;
+border-radius:8px;
+padding:10px;
+min-width:110px;
+max-width:130px;
+z-index:100;
+display:none;
+box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+
+#planetFloatBox h3{
+margin:0 0 8px 0;
+font-size:14px;
+color:#ffd700;
+}
+
+#planetFloatBox label{
+font-size:12px;
+display:block;
+margin-bottom:6px;
+}
+
+#planetFloatBox input,
+#planetFloatBox select{
+width:100%;
+margin-bottom:6px;
+}
+
+#planetFloatBox button{
+width:100%;
+margin-top:4px;
+}
+
+#planetFloatClose{
+float:right;
+cursor:pointer;
+color:#94a3b8;
+font-size:16px;
+line-height:1;
+}
+
+#planetFloatClose:hover{
+color:white;
+}
+
+/* esconder coluna direita */
+.right{
+display:none;
+}
+
+/* GP ativo min/max em azul */
+#activeGPmin,
+#activeGPmax {
+  color: #4da6ff;
+  font-weight: bold;
+}
+
+/* Container do contador de evento */
+#gpProjectionInfo {
+  font-size: 0.9em;
+  white-space: pre-line;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+/* estados de cor do contador */
+#gpProjectionInfo.status-before {
+  color: #aaa;
+}
+
+#gpProjectionInfo.status-soon {
+  color: #f97316;
+}
+
+#gpProjectionInfo.status-during {
+  color: #4da6ff;
+}
+
+#gpProjectionInfo.status-ended {
+  color: #4ade80;
+}
+
+/* pisca vermelho quando falta menos de 12h */
+#gpProjectionInfo.status-critical {
+  color: #f87171;
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
