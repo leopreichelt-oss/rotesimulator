@@ -152,3 +152,14 @@ Arquivos: phaseUtils.js, handlers.js, app.js, index.html, style.css
 - GP projetado sempre em azul (#4da6ff)
 - GP ativo min/max em azul
 - applyGPProjection removida do onload para não sobrescrever loadSt
+
+[30/03/2026]
+Extensão SWGOH Sync — conexão com simulador
+
+Arquivo: popup.js, popup.html, manifest.json
+
+- Botão "Enviar ao simulador" adicionado
+- Extensão injeta GP, jogadores e crescimento diário no simulador
+- Simulador recalcula automaticamente ao receber os dados
+- Funciona com simulador aberto ou fechado
+- Crescimento por jogador normaliza após histórico de dias distintos
