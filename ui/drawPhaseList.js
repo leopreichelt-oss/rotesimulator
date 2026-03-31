@@ -44,8 +44,8 @@ if((p.carryMin || 0) > (p.carryMax || 0)){
 if(p.cenarioA){
   carryWarning += `<div class="carryWarning">
     ⚠ <strong>Risco de queda de estrelas:</strong> cenário otimista bate ${p.maxPossibleStars}★ mas pessimista pode ficar em ${p.totalStarsMin}★.<br>
-    👉 Ao bater ${p.totalStarsMin + 1}★, o líder deve avaliar bloquear deploy em 1 planeta para garantir ${p.totalStarsMin + 2}★ — pode sacrificar a ${p.maxPossibleStars}★.<br>
-    👉 Após bater ${p.totalStarsMin + 2}★, avaliar se ${p.maxPossibleStars}★ ainda é viável com o GP restante.
+    👉 Ao bater ${p.totalStarsMin + 1}★, avaliar bloquear deploy em 1 planeta para garantir ${p.totalStarsMin + 2}★.<br>
+👉 Após garantir ${p.totalStarsMin + 2}★, avaliar GP restante: se suficiente, retomar o planeta bloqueado para tentar ${p.maxPossibleStars}★.
   </div>`
 }
 
