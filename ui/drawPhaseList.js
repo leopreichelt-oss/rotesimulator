@@ -37,9 +37,30 @@ else if(p.carryMax > 0) carryClass = "carryPositive"
 
 let carryWarning = ""
 if((p.carryMin || 0) > (p.carryMax || 0)){
-  carryWarning = `<div class="carryWarning">⚠ Carry mínimo maior que máximo: a guilda pode bater 5★ sem atingir 6★. Avalie travar movimentação ao atingir 5★ e não fazer ações antecipadas no planeta seguinte.</div>`
+  carryWarning += `<div class="carryWarning">⚠ Carry mínimo maior que máximo: a guilda pode bater 5★ sem atingir 6★. Avalie travar movimentação ao atingir 5★ e não fazer ações antecipadas no planeta seguinte.</div>`
 }
 
+// CENÁRIO A: otimista bate máximo, pessimista não
+if(p.cenarioA){
+  carryWarning += `<div class="carryWarning">
+    ⚠ <strong>Risco de queda de estrelas:</strong> cenário otimista bate ${p.maxPossibleStars}★ mas pessimista pode ficar em ${p.totalStarsMin}★.<br>
+    👉 Ao bater ${p.totalStarsMin + 1}★, o líder deve avaliar bloquear deploy em 1 planeta para garantir ${p.totalStarsMin + 2}★ — pode sacrificar a ${p.maxPossibleStars}★.<br>
+    👉 Após bater ${p.totalStarsMin + 2}★, avaliar se ${p.maxPossibleStars}★ ainda é viável com o GP restante.
+  </div>`
+}
+
+// CENÁRIO B: 5★ alcançável sacrificando 6★
+if(p.cenarioB && !p.cenarioA){
+  let alvo = (p.maxPossibleStars || 6) - 1
+  let gpRestanteTexto = phase < 6
+    ? "👉 GP restante vira carry para a próxima fase."
+    : ""
+  carryWarning += `<div class="carryWarning">
+    ⚠ <strong>Estratégia de garantia:</strong> ${p.maxPossibleStars}★ fora do alcance, mas ${alvo}★ é possível concentrando GP.<br>
+    👉 Ao bater ${alvo - 1}★, bloquear deploy em 1 planeta e concentrar tudo no outro para garantir ${alvo}★.<br>
+    ${gpRestanteTexto}
+  </div>`
+}
 // ⭐ gap (opcional)
 let gapText = ""
 

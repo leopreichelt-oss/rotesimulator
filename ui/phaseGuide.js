@@ -187,6 +187,32 @@ if(specialPlatoons.length){
     + state.planets[specialPlatoons[0]].platoons
     + " platoons em " + specialPlatoons.join(" e ") + "\n"
 }
+// ----------------
+// ALERTA ESTRATÉGICO
+// ----------------
+
+if(phaseData.cenarioA){
+  let maxS = phaseData.maxPossibleStars || 6
+  let minS = phaseData.totalStarsMin || 0
+  text += "\n━━━━━━━━━━━━━━━━\n\n"
+  text += "⚠ ALERTA ESTRATÉGICO\n"
+  text += `• Cenário otimista: ${maxS}★ — cenário pessimista: ${minS}★\n`
+  text += `• Ao bater ${minS + 1}★: avaliar bloquear 1 planeta para garantir ${minS + 2}★\n`
+  text += `• Após ${minS + 2}★: verificar se ${maxS}★ ainda é viável\n`
+  if(phase < 6){
+  text += `• Se não for viável: parar deploy no planeta bloqueado e transformar GP restante em carry\n`
+}
+}
+
+if(phaseData.cenarioB && !phaseData.cenarioA){
+  let maxS = phaseData.maxPossibleStars || 6
+  let alvo = maxS - 1
+  text += "\n━━━━━━━━━━━━━━━━\n\n"
+  text += "⚠ ALERTA ESTRATÉGICO\n"
+  text += `• ${maxS}★ fora do alcance nesta fase\n`
+  text += `• Ao bater ${alvo - 1}★: bloquear 1 planeta e concentrar GP no outro\n`
+  text += `• Objetivo: garantir ${alvo}★ — GP restante vira carry\n`
+}
 
 // ----------------
 // COPIAR

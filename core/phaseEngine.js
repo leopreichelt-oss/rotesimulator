@@ -690,8 +690,84 @@ state.planets[name].carryIn = carryPerPlanet
 // ----------------------
 
 if(phase === 6){
+  phaseState.strategy = "final"
+}
 
-phaseState.strategy = "final"
+// ----------------------
+// ANÁLISE ESTRATÉGICA DE ESTRELAS
+// ----------------------
+
+// só aplica em fases com 2 ou 3 planetas
+if(phasePlanets.length >= 2){
+
+  let maxPossibleStars = phasePlanets.length * 3
+
+  // calcular score necessário para cada nível de estrelas da fase
+  // somando os thresholds de cada planeta
+  let scoreFor = (starLevel) => {
+    return results.reduce((s, p) => {
+      let sd = planetData[p.name]?.stars || {}
+      if(starLevel >= 3) return s + (sd.three || 0)
+      if(starLevel >= 2) return s + (sd.two || 0)
+      if(starLevel >= 1) return s + (sd.one || 0)
+      return s
+    }, 0)
+  }
+
+  let scoreNeeded6 = scoreFor(3) // todas as 3★
+  let scoreNeeded5 = results.reduce((s, p) => {
+    // 5★ em fase de 2 planetas = 3★ num + 2★ no outro
+    // calculamos como: score total mínimo para ter N estrelas
+    let sd = planetData[p.name]?.stars || {}
+    return s + (sd.two || 0)
+  }, 0) + Math.min(...results.map(p => {
+    let sd = planetData[p.name]?.stars || {}
+    return (sd.three || 0) - (sd.two || 0)
+  }))
+  let scoreNeeded4 = scoreFor(2) // todas as 2★
+
+  let phaseScoreMaxVal = results.reduce((s,p) => s + (p.scoreMax||0), 0)
+  let phaseScoreMinVal = results.reduce((s,p) => s + (p.scoreMin||0), 0)
+
+  // CENÁRIO A: otimista bate máximo, pessimista não bate
+  let cenarioA = (
+    phasePlanets.length === 2 &&
+    totalStarsMax === maxPossibleStars &&
+    totalStarsMin < maxPossibleStars &&
+    totalStarsMin >= phasePlanets.length // pelo menos 1★ por planeta
+  )
+
+  // CENÁRIO B: ambos ficam abaixo do máximo mas 5★ é alcançável
+  // sacrificando a tentativa de 6★
+  let cenarioB = false
+  let score5starAlcancavel = false
+
+  if(phasePlanets.length === 2){
+    // verificar se concentrando GP num planeta consegue 5★
+    // 5★ = 3★ num planeta + 2★ no outro
+    score5starAlcancavel = phaseScoreMaxVal >= scoreNeeded5
+    cenarioB = (
+      totalStarsMax < maxPossibleStars &&
+      score5starAlcancavel &&
+      totalStarsMax >= phasePlanets.length
+    )
+  }
+
+  if(phasePlanets.length === 3){
+    // para 3 planetas: verificar se é possível garantir 2★ em todos
+    // mesmo não batendo 3★ em algum
+    cenarioB = (
+      totalStarsMax < maxPossibleStars &&
+      totalStarsMin < totalStarsMax
+    )
+  }
+
+  phaseState.cenarioA = cenarioA
+  phaseState.cenarioB = cenarioB
+  phaseState.score5starAlcancavel = score5starAlcancavel
+  phaseState.totalStarsMax = totalStarsMax
+  phaseState.totalStarsMin = totalStarsMin
+  phaseState.maxPossibleStars = maxPossibleStars
 
 }
 
