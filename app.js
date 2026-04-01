@@ -5,6 +5,7 @@ window.onload = function(){
   calculate()
   drawROTEHistory()
   updateGPProjectionDisplay()
+  drawPlatoonList()
 }
 
 function togglePhaseDetails(phase, el){

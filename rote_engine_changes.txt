@@ -163,3 +163,16 @@ Arquivo: popup.js, popup.html, manifest.json
 - Simulador recalcula automaticamente ao receber os dados
 - Funciona com simulador aberto ou fechado
 - Crescimento por jogador normaliza após histórico de dias distintos
+[31/03/2026]
+Análise estratégica de estrelas por fase
+
+Arquivos: core/phaseEngine.js, ui/drawPhaseList.js, ui/phaseGuide.js
+
+- Cenário A: otimista bate máximo, pessimista não bate
+  → Aviso: avaliar bloquear 1 planeta ao bater estrela intermediária
+  → Após garantir estrela intermediária, avaliar GP restante para tentar máximo
+- Cenário B: máximo fora do alcance mas estrela intermediária é possível
+  → Aviso: bloquear 1 planeta e concentrar GP para garantir intermediária
+  → Fase 6: sem menção a carry (fase final)
+- Aplica apenas em fases com 2 ou 3 planetas
+- Avisos aparecem na UI, roteiro da fase e briefing para oficiais

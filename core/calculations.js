@@ -29,6 +29,7 @@ simulateExtraPlanetStars()
 drawGalaxyMap()
 drawPlanetList()
 drawPhaseList()
+drawPlatoonList()
 updateStarCounter()
 
 drawROTEHistory()

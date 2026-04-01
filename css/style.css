@@ -350,9 +350,12 @@ line-height:1;
 color:white;
 }
 
-/* esconder coluna direita */
 .right{
-display:none;
+  background:#1e293b;
+  padding:10px;
+  border-left:2px solid #334155;
+  overflow:auto;
+  font-size:12px;
 }
 
 /* GP ativo min/max em azul */
