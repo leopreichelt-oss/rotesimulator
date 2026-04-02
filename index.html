@@ -33,6 +33,16 @@ PG ativo máximo
 <button onclick="handleBriefing(); generateOfficerBriefing();">
 Briefing para oficiais
 </button>
+<!-- após o botão "Briefing para oficiais" -->
+<button onclick="toggleSettingsPanel()">⚙ Settings</button>
+
+<div id="settingsPanel" style="display:none;position:absolute;top:60px;right:10px;width:280px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:14px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <strong>⚙ Configurações</strong>
+    <span onclick="toggleSettingsPanel()" style="cursor:pointer;color:#94a3b8;font-size:16px;">✕</span>
+  </div>
+  <div id="settingsPanelContent"></div>
+</div>
 <div id="roteHistoryPanel"></div>
 </header>
 
@@ -118,5 +128,8 @@ Briefing para oficiais
 <script src="ui/phaseGuide.js"></script>
 <script src="data/platoonRequirements.js"></script>
 <script src="ui/drawPlatoonList.js"></script>
+<script src="core/guildEngine.js"></script>
+<script src="core/rosterEngine.js"></script>
+<script src="ui/settingsPanel.js"></script>
 <script src="app.js"></script>
 </html>
