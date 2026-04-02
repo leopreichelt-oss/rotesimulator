@@ -1,7 +1,6 @@
-// ----------------------
+// =====================================================
 // MAPEAMENTO PLANETA → CHAVE DO PLATOON
-// ----------------------
-
+// =====================================================
 var PLANET_PLATOON_KEY = {
   "Mustafar":              "F1_DS",
   "Corellia":              "F1_MS",
@@ -33,122 +32,149 @@ function getPlanetTier(name) {
 }
 
 var _platoonExpandState = _platoonExpandState || {}
-
 function togglePlatoonExpand(key) {
   _platoonExpandState[key] = !_platoonExpandState[key]
   drawPlatoonList()
 }
 
-// ----------------------
-// CALCULAR FASES DISPONÍVEIS PARA PLATOON
-// Um planeta fica ativo a partir do seu tier
-// Se o objetivo é a fase N e o tier é T, há (N - T + 1) fases disponíveis
-// ----------------------
-function calcFasesDisponiveis(planetName, phaseObjetivo) {
-  var tier = getPlanetTier(planetName)
-  return Math.max(1, phaseObjetivo - tier + 1)
-}
+// =====================================================
+// ANÁLISE DE PLATOON
+// Retorna para cada unitId: slots necessários, jogadores disponíveis,
+// fases necessárias para completar
+// =====================================================
+function analyzePlatoon(requirements, relicMin, rosterMap, fasesDisponiveis, fasesConflito) {
+  // fasesConflito: por fase, quantos jogadores estão comprometidos com planetas objetivo
+  // fasesDisponiveis: total de fases em que o planeta está ativo
 
-// ----------------------
-// CALCULAR DISPONIBILIDADE REAL CONSIDERANDO CONFLITOS ENTRE PLANETAS
-// Para cada unidade, conta jogadores disponíveis por fase,
-// considerando que outros planetas ativos na mesma fase também competem pelo mesmo personagem
-// ----------------------
-function calcDisponibilidadeComConflitos(planetName, requirements, relicMin, rosterMap, allActivePlanets) {
-  var phaseObjetivo = Number(state.planets[planetName].phase)
-  var tier = getPlanetTier(planetName)
-  var guildSize = Object.keys(rosterMap).length
-
-  // Fases em que este planeta está ativo
-  // Ex: Kashyyyk tier=3, fase=4 → ativo em F3 e F4
-  var fasesAtivas = []
-  for (var f = tier; f <= phaseObjetivo; f++) {
-    fasesAtivas.push(f)
-  }
-
-  // Para cada fase ativa, quais outros planetas também estão ativos e competem por personagens?
-  // Um planeta X está ativo na fase F se: tier(X) <= F <= phase_objetivo(X)
-  var conflitoPorFase = {}
-  fasesAtivas.forEach(function(fase) {
-    conflitoPorFase[fase] = []
-    allActivePlanets.forEach(function(otherName) {
-      if (otherName === planetName) return
-      var otherTier = getPlanetTier(otherName)
-      var otherPhase = Number(state.planets[otherName].phase)
-      if (otherTier <= fase && fase <= otherPhase) {
-        conflitoPorFase[fase].push(otherName)
-      }
-    })
-  })
-
-  // Para cada unitId necessário, calcular disponibilidade total considerando conflitos
-  var unitNeeded = {}  // unitId → slots necessários no planeta (1 por op = 1 por fase)
+  // Contar slots necessários por personagem (1 slot = 1 op que contém este personagem)
+  var unitSlots = {}
   Object.keys(requirements).forEach(function(op) {
     requirements[op].forEach(function(slot) {
       var id = slot.unitId || slot
-      unitNeeded[id] = (unitNeeded[id] || 0) + 1
+      unitSlots[id] = (unitSlots[id] || 0) + 1
     })
   })
 
-  var totalOps = Object.keys(requirements).length
-  var unitAnalysis = {}
+  var results = []
 
-  Object.keys(unitNeeded).forEach(function(id) {
-    var needed = unitNeeded[id] // total de slots neste planeta (= nº de ops onde aparece)
+  Object.keys(unitSlots).forEach(function(id) {
+    var needed = unitSlots[id]
 
-    // Jogadores que têm este personagem no relic necessário
+    // Total de jogadores da guilda com este personagem no relic mínimo
     var playersWithUnit = Object.values(rosterMap).filter(function(player) {
       var unit = player.units.find(function(u) { return u.base_id === id })
       if (!unit) return false
       if (unit.combat_type === 2) return unit.rarity >= 7
       return rosterEngine.toRelicLevel(unit.relic_tier) >= relicMin
     })
-
     var totalHave = playersWithUnit.length
 
-    // Calcular disponibilidade por fase considerando conflitos
-    // Em cada fase, quantos desses jogadores já estão "comprometidos" com outros planetas?
-    // Simplificação conservadora: em cada fase com conflito, estimamos que
-    // ceil(totalHave * conflitos / (conflitos + 1)) jogadores são usados nos outros planetas
-    var disponibilidadeTotalNasFases = 0
-    fasesAtivas.forEach(function(fase) {
-      var conflitos = conflitoPorFase[fase].length
-      // Estimativa de quantos ficam disponíveis para este planeta nesta fase
-      var dispNaFase = conflitos === 0 
-        ? totalHave 
-        : Math.floor(totalHave / (conflitos + 1))
-      disponibilidadeTotalNasFases += dispNaFase
-    })
+    if (totalHave === 0) {
+      results.push({ id: id, needed: needed, have: 0, status: 'missing', fasesNecessarias: 999 })
+      return
+    }
 
-    // Ops que podem ser completadas com a disponibilidade total nas fases
-    var opsPossíveis = Math.min(needed, disponibilidadeTotalNasFases)
-    var opsImpossiveis = needed - opsPossíveis
+    // Calcular disponibilidade considerando conflitos por fase
+    // Em cada fase, jogadores comprometidos com planeta objetivo são subtraídos
+    // A disponibilidade acumulada ao longo das fases determina se é completável
+    var slotsCompletaveis = 0
+    for (var f = 0; f < fasesDisponiveis; f++) {
+      // conflito[f] = nº de jogadores com este personagem usados em planetas objetivo nesta fase
+      var usadosNaFase = fasesConflito[f] ? (fasesConflito[f][id] || 0) : 0
+      var dispNaFase = Math.max(0, totalHave - usadosNaFase)
+      slotsCompletaveis += dispNaFase
+      if (slotsCompletaveis >= needed) break
+    }
 
-    // Verificar se há conflito real de sequência
-    var hasSequenceConflict = false
-    fasesAtivas.forEach(function(fase) {
-      if (conflitoPorFase[fase].length > 0 && totalHave > 0 && totalHave < needed) {
-        hasSequenceConflict = true
+    if (slotsCompletaveis >= needed) {
+      // Calcular em quantas fases
+      var fasesNecessarias = 1
+      var acumulado = 0
+      for (var f2 = 0; f2 < fasesDisponiveis; f2++) {
+        var usados2 = fasesConflito[f2] ? (fasesConflito[f2][id] || 0) : 0
+        var disp2 = Math.max(0, totalHave - usados2)
+        acumulado += disp2
+        if (acumulado >= needed) { fasesNecessarias = f2 + 1; break }
       }
-    })
-
-    unitAnalysis[id] = {
-      needed: needed,
-      have: totalHave,
-      fasesDisponiveis: fasesAtivas.length,
-      opsPossíveis: opsPossíveis,
-      opsImpossíveis: opsImpossiveis,
-      hasSequenceConflict: hasSequenceConflict,
-      conflictPlanets: [].concat.apply([], Object.values(conflitoPorFase)).filter(function(v,i,a){return a.indexOf(v)===i})
+      results.push({
+        id: id,
+        needed: needed,
+        have: totalHave,
+        fasesNecessarias: fasesNecessarias,
+        status: fasesNecessarias === 1 ? 'ok' : 'multifase'
+      })
+    } else {
+      // Não completável nem com todas as fases disponíveis
+      results.push({
+        id: id,
+        needed: needed,
+        have: totalHave,
+        slotsCompletaveis: slotsCompletaveis,
+        fasesNecessarias: 999,
+        status: 'impossible'
+      })
     }
   })
 
-  return { unitAnalysis: unitAnalysis, totalOps: totalOps, fasesAtivas: fasesAtivas }
+  return results
 }
 
-// ----------------------
+// =====================================================
+// CALCULAR CONFLITOS POR FASE
+// Para cada fase em que o planeta está ativo, quais personagens
+// já estão sendo usados em planetas OBJETIVO da mesma fase?
+// =====================================================
+function calcConflitos(planetName, fasesAtivas, allActivePlanets, rosterMap, relicMin) {
+  var conflitoPorFase = {}
+
+  fasesAtivas.forEach(function(fase, idx) {
+    conflitoPorFase[idx] = {}
+
+    // Planetas que são OBJETIVO desta fase (phase == fase) exceto o planeta atual
+    var planetasObjetivoNaFase = allActivePlanets.filter(function(other) {
+      if (other === planetName) return false
+      return Number(state.planets[other].phase) === fase
+    })
+
+    // Para cada planeta objetivo, contar quantos jogadores usa de cada personagem
+    planetasObjetivoNaFase.forEach(function(other) {
+      var otherKey = PLANET_PLATOON_KEY[other]
+      var otherReq = otherKey ? platoonRequirements[otherKey] : null
+      var otherTier = getPlanetTier(other)
+      var otherRelicMin = TIER_RELIC[otherTier] || 5
+      if (!otherReq) return
+
+      // Contar slots necessários neste planeta concorrente
+      var otherSlots = {}
+      Object.keys(otherReq).forEach(function(op) {
+        otherReq[op].forEach(function(slot) {
+          var id = slot.unitId || slot
+          otherSlots[id] = (otherSlots[id] || 0) + 1
+        })
+      })
+
+      // Para cada personagem do planeta concorrente, registrar jogadores consumidos
+      Object.keys(otherSlots).forEach(function(id) {
+        var have = Object.values(rosterMap).filter(function(player) {
+          var unit = player.units.find(function(u) { return u.base_id === id })
+          if (!unit) return false
+          if (unit.combat_type === 2) return unit.rarity >= 7
+          return rosterEngine.toRelicLevel(unit.relic_tier) >= otherRelicMin
+        }).length
+
+        // O planeta objetivo consome min(have, needed) jogadores
+        var consumed = Math.min(have, otherSlots[id])
+        conflitoPorFase[idx][id] = (conflitoPorFase[idx][id] || 0) + consumed
+      })
+    })
+  })
+
+  return conflitoPorFase
+}
+
+// =====================================================
 // DESENHAR COLUNA DE PLATOONS
-// ----------------------
+// =====================================================
 function drawPlatoonList() {
   var container = document.getElementById("platoonList")
   if (!container) return
@@ -183,16 +209,17 @@ function drawPlatoonList() {
     var div = document.createElement("div")
     div.style.cssText = "margin-bottom:10px;padding:8px;border-radius:6px;background:#1e3a5f;border-left:3px solid #334155;"
 
-    var fasesDisponiveis = calcFasesDisponiveis(name, phase)
-    var fasesInfo = fasesDisponiveis > 1 
-      ? ' <span style="color:#60a5fa;font-size:10px;">(' + fasesDisponiveis + ' fases disponíveis)</span>'
+    // Fases disponíveis: do tier até o objetivo
+    var fasesDisponiveis = Math.max(1, phase - tier + 1)
+
+    var fasesInfo = fasesDisponiveis > 1
+      ? ' <span style="color:#60a5fa;font-size:10px;">(' + fasesDisponiveis + ' fases disp.)</span>'
       : ''
 
     var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
       + 'F' + phase + ' \u2014 ' + name
       + '<span style="color:#94a3b8;font-weight:normal;"> (R' + relicMin + '+)</span>'
-      + fasesInfo
-      + '</div>'
+      + fasesInfo + '</div>'
 
     if (!requirements) {
       div.innerHTML = header + '<div style="color:#94a3b8;font-size:11px;">Sem dados de platoon.</div>'
@@ -201,7 +228,15 @@ function drawPlatoonList() {
     }
 
     if (hasRoster) {
-      _renderWithRoster(div, header, name, requirements, relicMin, rosterMap, activePlanets, phase, fasesDisponiveis)
+      // Calcular fases ativas do planeta (do tier até o objetivo)
+      var fasesAtivas = []
+      for (var f = tier; f <= phase; f++) fasesAtivas.push(f)
+
+      // Calcular conflitos com outros planetas objetivo em cada fase
+      var conflitos = calcConflitos(name, fasesAtivas, activePlanets, rosterMap, relicMin)
+
+      var results = analyzePlatoon(requirements, relicMin, rosterMap, fasesDisponiveis, conflitos)
+      _renderWithRoster(div, header, name, results, fasesDisponiveis)
     } else {
       _renderManual(div, header, name, planetState, requirements)
     }
@@ -210,133 +245,95 @@ function drawPlatoonList() {
   })
 }
 
-// ----------------------
+// =====================================================
 // RENDER COM ROSTER REAL
-// ----------------------
-function _renderWithRoster(div, header, name, requirements, relicMin, rosterMap, allActivePlanets, phaseObjetivo, fasesDisponiveis) {
-  var analysis = calcDisponibilidadeComConflitos(name, requirements, relicMin, rosterMap, allActivePlanets)
-  var unitAnalysis = analysis.unitAnalysis
-  var totalOps = analysis.totalOps
+// =====================================================
+function _renderWithRoster(div, header, name, results, fasesDisponiveis) {
+  var missing    = results.filter(function(r) { return r.status === 'missing' })
+  var impossible = results.filter(function(r) { return r.status === 'impossible' })
+  var multifase  = results.filter(function(r) { return r.status === 'multifase' })
+  var ok         = results.filter(function(r) { return r.status === 'ok' })
 
-  // Classificar personagens
-  var ok = [], partial = [], missing = []
-
-  Object.keys(unitAnalysis).forEach(function(id) {
-    var u = unitAnalysis[id]
-    if (u.have === 0) {
-      missing.push(id)
-    } else if (u.opsPossíveis >= u.needed) {
-      ok.push(id)
-    } else {
-      partial.push(id)
-    }
-  })
-
-  // Status geral
-  var borderColor, statusLines = []
-
-  if (missing.length === 0 && partial.length === 0) {
-    borderColor = "#4ade80"
-    div.style.borderLeft = "3px solid " + borderColor
-    if (fasesDisponiveis > 1) {
-      div.innerHTML = header + '<div style="color:#4ade80;">\u2705 Platoons completos'
-        + ' <span style="color:#86efac;font-size:10px;">(em até ' + fasesDisponiveis + ' fases)</span></div>'
-    } else {
-      div.innerHTML = header + '<div style="color:#4ade80;">\u2705 Platoons completos em 1 fase</div>'
-    }
+  // === VERDE: tudo ok em 1 fase ===
+  if (missing.length === 0 && impossible.length === 0 && multifase.length === 0) {
+    div.style.borderLeft = "3px solid #4ade80"
+    div.innerHTML = header + '<div style="color:#4ade80;">\u2705 Platoons completos em 1 fase</div>'
     return
   }
 
-  if (missing.length === 0 && partial.length > 0) {
-    borderColor = "#f97316"
-  } else {
-    borderColor = "#f87171"
+  // === VERDE CLARO: ok mas precisa de mais de 1 fase (sem impossíveis/missing) ===
+  if (missing.length === 0 && impossible.length === 0 && multifase.length > 0) {
+    var maxFases = Math.max.apply(null, multifase.map(function(r) { return r.fasesNecessarias }))
+    div.style.borderLeft = "3px solid #86efac"
+    var msg = '\u2705 Completável em ' + maxFases + ' fase(s)'
+      + (fasesDisponiveis >= maxFases
+        ? ' \u2014 sequência permite \u2713'
+        : ' \u2014 <span style="color:#f87171;">sequência não permite \u2717 (só ' + fasesDisponiveis + ' disp.)</span>')
+    div.innerHTML = header + '<div style="color:#86efac;font-size:11px;">' + msg + '</div>'
+
+    // Mostrar detalhes dos multifase
+    var lista = '<div style="margin-top:4px;">'
+    multifase.forEach(function(r) {
+      var falta = r.needed - r.have
+      lista += '<div style="color:#fbbf24;font-size:11px;margin-bottom:2px;">'
+        + '\u26a0 ' + getUnitName(r.id)
+        + ' <span style="color:#94a3b8;">' + r.have + '/' + r.needed
+        + ' jogadores \u2014 precisa de ' + r.fasesNecessarias + ' fase(s)</span></div>'
+    })
+    lista += '</div>'
+    div.innerHTML = header + '<div style="color:#86efac;font-size:11px;">' + msg + '</div>' + lista
+    return
   }
+
+  // === LARANJA: tem personagens mas insuficientes + impossíveis sem conflito ===
+  // === VERMELHO: tem missing (ninguém tem) ===
+  var borderColor = missing.length > 0 ? "#f87171" : "#f97316"
   div.style.borderLeft = "3px solid " + borderColor
 
-  // Montar mensagens de status
-  var allProblems = []
-
-  // MISSING - vermelho
-  missing.forEach(function(id) {
-    var u = unitAnalysis[id]
-    var request = u.needed + Math.ceil(u.needed / 3)
-    allProblems.push({
-      color: "#f87171",
-      icon: "\u274c",
-      text: getUnitName(id),
-      sub: "nenhum jogador \u2014 pedir " + request
-    })
-  })
-
-  // PARTIAL - laranja, com info de fases
-  partial.forEach(function(id) {
-    var u = unitAnalysis[id]
-    var falta = u.needed - u.opsPossíveis
-    var color, icon, sub
-
-    if (u.hasSequenceConflict && u.conflictPlanets.length > 0) {
-      // Conflito de sequência
-      color = "#fb923c"
-      icon = "\u26a0"
-      var conflictNames = u.conflictPlanets.slice(0,2).join(', ')
-      if (fasesDisponiveis > 1) {
-        sub = u.have + '/' + u.needed + ' jogadores \u2014 conflito com ' + conflictNames
-          + '. Completável em ' + fasesDisponiveis + ' fases se sequência permitir'
-      } else {
-        sub = u.have + '/' + u.needed + ' jogadores \u2014 sequência não permite completar'
-          + ' (conflito com ' + conflictNames + ')'
-      }
-    } else if (fasesDisponiveis > 1) {
-      // Pode completar em mais fases
-      color = "#fbbf24"
-      icon = "\u26a0"
-      var opsPerFase = Math.floor(u.needed / fasesDisponiveis)
-      sub = u.have + '/' + u.needed + ' jogadores \u2014 completar em ' + fasesDisponiveis + ' fases ('
-        + u.opsPossíveis + ' ops possíveis)'
-    } else {
-      // Insuficiente e só 1 fase
-      color = "#fb923c"
-      icon = "\u26a0"
-      sub = u.have + '/' + u.needed + ' jogadores \u2014 faltam ' + falta
-        + ', pedir ' + (falta + Math.ceil(falta/3))
-    }
-
-    allProblems.push({ color: color, icon: icon, text: getUnitName(id), sub: sub })
-  })
-
   // Resumo
-  var resumoTexto = ''
-  if (missing.length > 0 && partial.length > 0) {
-    resumoTexto = missing.length + ' sem cobertura, ' + partial.length + ' parciais'
-  } else if (missing.length > 0) {
-    resumoTexto = missing.length + ' personagens sem ninguém na guilda'
-  } else {
-    var fasesNecessarias = Math.ceil(partial.reduce(function(max, id) {
-      var u = unitAnalysis[id]
-      return Math.max(max, Math.ceil(u.needed / Math.max(1, u.have)))
-    }, 1))
-    if (fasesDisponiveis >= fasesNecessarias) {
-      resumoTexto = '\u26a0 Completável em ' + fasesNecessarias + ' fase(s) \u2014 planeta ativo por ' + fasesDisponiveis + ' fase(s)'
-    } else {
-      resumoTexto = '\u274c Sequência não permite completar \u2014 precisa de ' + fasesNecessarias + ' fases, tem apenas ' + fasesDisponiveis
-    }
-  }
+  var partes = []
+  if (missing.length > 0) partes.push(missing.length + ' sem ninguém na guilda')
+  if (impossible.length > 0) partes.push(impossible.length + ' impossíveis de completar')
+  if (multifase.length > 0) partes.push(multifase.length + ' precisam de mais fases')
 
-  var resumo = '<div style="font-size:11px;margin-bottom:6px;color:#94a3b8;">' + resumoTexto + '</div>'
+  var resumo = '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">'
+    + partes.join(' \u2014 ') + '</div>'
 
   // Lista de problemas
+  var allProblems = missing.concat(impossible).concat(multifase)
   var PREVIEW = 5
   var expanded = !!_platoonExpandState[name]
   var visible = expanded ? allProblems : allProblems.slice(0, PREVIEW)
   var total = allProblems.length
 
   var lista = '<div>'
-  visible.forEach(function(item) {
-    lista += '<div style="color:' + item.color + ';font-size:11px;margin-bottom:3px;">'
-      + item.icon + ' ' + item.text
-      + ' <span style="color:#64748b;">' + item.sub + '</span>'
-      + '</div>'
+  visible.forEach(function(r) {
+    var uname = getUnitName(r.id)
+    var color, icon, sub
+
+    if (r.status === 'missing') {
+      var request = r.needed + Math.ceil(r.needed / 3)
+      color = "#f87171"
+      icon = "\u274c"
+      sub = "nenhum jogador na guilda \u2014 pedir " + request
+    } else if (r.status === 'impossible') {
+      var falta = r.needed - r.slotsCompletaveis
+      color = "#f97316"
+      icon = "\u274c"
+      sub = r.have + '/' + r.needed + ' jogadores'
+        + ' \u2014 sequência não permite completar'
+        + ' (faltam ' + falta + ' slots mesmo com ' + fasesDisponiveis + ' fases)'
+    } else { // multifase
+      color = "#fbbf24"
+      icon = "\u26a0"
+      sub = r.have + '/' + r.needed + ' jogadores'
+        + ' \u2014 precisa de ' + r.fasesNecessarias + ' fase(s)'
+        + (fasesDisponiveis >= r.fasesNecessarias ? ' \u2713' : ' \u2717 só ' + fasesDisponiveis + ' disp.')
+    }
+
+    lista += '<div style="color:' + color + ';font-size:11px;margin-bottom:3px;">'
+      + icon + ' ' + uname
+      + ' <span style="color:#64748b;">' + sub + '</span></div>'
   })
   lista += '</div>'
 
@@ -354,9 +351,9 @@ function _renderWithRoster(div, header, name, requirements, relicMin, rosterMap,
   div.innerHTML = header + resumo + lista + btnHtml
 }
 
-// ----------------------
+// =====================================================
 // RENDER MANUAL (fallback sem roster)
-// ----------------------
+// =====================================================
 function _renderManual(div, header, name, planetState, requirements) {
   var totalOps = Object.keys(requirements).length
   var platoons = Number(planetState.platoons) || 0
