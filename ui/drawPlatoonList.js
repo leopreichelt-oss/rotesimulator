@@ -260,11 +260,17 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMi
 
     var lista = '<div>'
     prealoca.forEach(function(r) {
+      var faltamP = Math.max(1, r.needed - r.have)
+      var pedirP = faltamP + Math.ceil(faltamP / 3)
+      var closestP = getClosestPlayers(r.id, relicMin, rosterMap, pedirP)
+      var closestTxtP = closestP.map(function(p) {
+        return p.name + ' (R' + p.currentLevel + ')'
+      }).join(', ')
       lista += '<div style="color:#fbbf24;font-size:11px;margin-bottom:2px;">'
         + '\u26a0 ' + getUnitName(r.id)
         + ' <span style="color:#64748b;">' + r.have + '/' + r.needed
-        + ' — alocar 1 slot na F' + (r.fasesNecessarias - 1 + (results[0] && results[0].fasesDisponiveis ? (fasesDisponiveis - r.fasesNecessarias + 1) : 1))
-        + ' anterior</span></div>'
+        + (closestTxtP ? ' \u2014 pedir: ' + closestTxtP : ' \u2014 alocar antecipadamente')
+        + '</span></div>'
     })
     lista += '</div>'
     div.innerHTML = header + statusLine + lista
