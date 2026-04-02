@@ -1,48 +1,60 @@
 /**
  * guildEngine.js
- * Dado um allycode, busca informações da guilda e lista de membros.
- * Fluxo: allycode → guild_id → membros (nome + allycode)
+ * Busca dados da guilda via Cloudflare Worker → Railway Comlink → API oficial do jogo
+ * Fluxo: allyCode → playerId + guildId → membros da guilda
  */
+
+var COMLINK_URL = 'https://worker-lively-heart-f0a0.leopreichelt.workers.dev'
 
 var guildEngine = {
 
-  // Busca guild_id e membros a partir de um allycode
-  // callback(err, result) onde result = { guildId, guildName, members: [{name, allycode}] }
+  // Dado um allycode, retorna info da guilda e lista de membros
+  // callback(err, { guildId, guildName, totalGP, playerCount, members:[{name,playerId,allyCode,gp}] })
   fetchFromAllycode: function(allycode, callback) {
-
     var cleanCode = String(allycode).replace(/\D/g, '')
     if (!cleanCode) return callback('Allycode inválido')
 
-    // Passo 1: buscar dados do jogador para pegar guild_id
-    fetch('https://swgoh.gg/api/player/' + cleanCode + '/')
-      .then(function(r) { return r.json() })
-      .then(function(playerData) {
-        var guildId = playerData.data.guild_id
-        var guildName = playerData.data.guild_name
+    // Passo 1: buscar dados do jogador para pegar guildId e playerId
+    fetch(COMLINK_URL + '/player', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: { allyCode: cleanCode } })
+    })
+    .then(function(r) { return r.json() })
+    .then(function(player) {
+      var guildId = player.guildId
+      var guildName = player.guildName
 
-        if (!guildId) return callback('Jogador não está em uma guilda')
+      if (!guildId) return callback('Jogador não está em uma guilda')
 
-        // Passo 2: buscar membros da guilda
-        return fetch('https://swgoh.gg/api/guild-profile/' + guildId + '/')
-          .then(function(r) { return r.json() })
-          .then(function(guildData) {
-            var members = guildData.data.members.map(function(m) {
-              return {
-                name: m.player_name,
-                allycode: m.ally_code,
-                gp: m.galactic_power || 0
-              }
-            })
-            callback(null, {
-              guildId: guildId,
-              guildName: guildName,
-              members: members,
-              totalGP: members.reduce(function(sum, m) { return sum + m.gp }, 0),
-              playerCount: members.length
-            })
-          })
+      // Passo 2: buscar membros da guilda
+      return fetch(COMLINK_URL + '/guild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: { guildId: guildId } })
       })
-      .catch(function(e) { callback('Erro ao buscar guilda: ' + e.message) })
+      .then(function(r) { return r.json() })
+      .then(function(d) {
+        var members = d.guild.member.map(function(m) {
+          return {
+            name: m.playerName,
+            playerId: m.playerId,
+            gp: Number(m.galacticPower) || 0
+          }
+        })
+
+        var totalGP = members.reduce(function(s, m) { return s + m.gp }, 0)
+
+        callback(null, {
+          guildId: guildId,
+          guildName: guildName,
+          totalGP: totalGP,
+          playerCount: members.length,
+          members: members
+        })
+      })
+    })
+    .catch(function(e) { callback('Erro: ' + e.message) })
   }
 
 }
