@@ -54,13 +54,14 @@ function countPlayersWithUnit(unitId, relicMin, rosterMap) {
 // LISTAR JOGADORES MAIS PROXIMOS DE UM PERSONAGEM
 // =====================================================
 function getClosestPlayers(unitId, relicMin, rosterMap, howMany) {
+  // Retorna jogadores que NĀNO atendem o requisito, ordenados por nivel atual (mais próximos primeiro)
   var players = Object.values(rosterMap).map(function(player) {
     var unit = player.units.find(function(u) { return u.base_id === unitId })
-    if (!unit) return null
-    var isShip = unit.combat_type === 2
-    var currentLevel = isShip ? unit.rarity : rosterEngine.toRelicLevel(unit.relic_tier)
-    var meetsReq = isShip ? unit.rarity >= 7 : currentLevel >= relicMin
-    return { name: player.name, currentLevel: currentLevel, meetsReq: meetsReq, isShip: isShip }
+    var isShip = unit && unit.combat_type === 2
+    var currentLevel = unit ? (isShip ? unit.rarity : rosterEngine.toRelicLevel(unit.relic_tier)) : -1
+    var meetsReq = unit ? (isShip ? unit.rarity >= 7 : currentLevel >= relicMin) : false
+    if (meetsReq) return null // já tem, não precisa listar
+    return { name: player.name, currentLevel: currentLevel, isShip: isShip }
   }).filter(Boolean)
   players.sort(function(a, b) { return b.currentLevel - a.currentLevel })
   return players.slice(0, howMany)
@@ -305,16 +306,14 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMi
       var faltamI = r.faltam
       var pedirI = faltamI + Math.ceil(faltamI / 3)
       var closestI = getClosestPlayers(r.id, relicMin, rosterMap, pedirI)
-      var closestTxtI = closestI.filter(function(p) { return !p.meetsReq })
-        .map(function(p) { return p.name + ' (R' + p.currentLevel + ')' }).join(', ')
+      var closestTxtI = closestI.map(function(p) { return p.currentLevel >= 0 ? p.name + ' (R' + p.currentLevel + ')' : p.name + ' (sem o personagem)' }).join(', ')
       color = "#f97316"; icon = "\u274c"
       sub = r.have + '/' + r.needed + ' \u2014 faltam ' + faltamI + (closestTxtI ? '. Pedir: ' + closestTxtI : '')
     } else {
       var faltamP = Math.max(1, r.needed - r.have)
       var pedirP = faltamP + Math.ceil(faltamP / 3)
       var closestP = getClosestPlayers(r.id, relicMin, rosterMap, pedirP)
-      var closestTxtP = closestP.filter(function(p) { return !p.meetsReq })
-        .map(function(p) { return p.name + ' (R' + p.currentLevel + ')' }).join(', ')
+      var closestTxtP = closestP.map(function(p) { return p.currentLevel >= 0 ? p.name + ' (R' + p.currentLevel + ')' : p.name + ' (sem o personagem)' }).join(', ')
       color = "#fbbf24"; icon = "\u26a0"
       sub = r.have + '/' + r.needed + (closestTxtP ? ' \u2014 pedir: ' + closestTxtP : '')
     }
