@@ -122,20 +122,20 @@ function analyzePlanetPlatoon(planetName, requirements, relicMin, rosterMap, all
     }
 
     if (fasesNecessarias <= fasesDisponiveis) {
-      // Possível completar
-      // fasesNecessarias === fasesDisponiveis → normal (fase objetivo)
-      // fasesNecessarias < fasesDisponiveis → pode pré-alocar (informativo)
+      // Verificar se completa somente na fase objetivo (sem precisar pre-alocar)
+      var dFaseObj = calcDemandaPorFase(phaseObjetivo, allActivePlanets)
+      var dOutrosFaseObj = Math.max(0, (dFaseObj[id] || 0) - needed)
+      var dispFaseObj = Math.max(0, totalHave - dOutrosFaseObj)
+      var completaNaFaseObj = dispFaseObj >= needed
+
       results.push({
         id: id,
         needed: needed,
         have: totalHave,
         fasesNecessarias: fasesNecessarias,
         fasesDisponiveis: fasesDisponiveis,
-        // "normal" = precisa apenas da fase objetivo (sem aviso necessário)
-        // "prealoca" = pode pré-alocar em fase anterior (informativo)
-        // "ok" = completa em 1 fase sem conflito
-        status: fasesNecessarias === 1 ? 'ok'
-               : fasesNecessarias === fasesDisponiveis ? 'normal'
+        status: completaNaFaseObj && fasesNecessarias === 1 ? 'ok'
+               : completaNaFaseObj ? 'normal'
                : 'prealoca'
       })
     } else {
