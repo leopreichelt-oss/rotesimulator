@@ -49,6 +49,23 @@ function countPlayersWithUnit(unitId, relicMin, rosterMap) {
   }).length
 }
 
+
+// =====================================================
+// LISTAR JOGADORES MAIS PROXIMOS DE UM PERSONAGEM
+// =====================================================
+function getClosestPlayers(unitId, relicMin, rosterMap, howMany) {
+  var players = Object.values(rosterMap).map(function(player) {
+    var unit = player.units.find(function(u) { return u.base_id === unitId })
+    if (!unit) return null
+    var isShip = unit.combat_type === 2
+    var currentLevel = isShip ? unit.rarity : rosterEngine.toRelicLevel(unit.relic_tier)
+    var meetsReq = isShip ? unit.rarity >= 7 : currentLevel >= relicMin
+    return { name: player.name, currentLevel: currentLevel, meetsReq: meetsReq, isShip: isShip }
+  }).filter(Boolean)
+  players.sort(function(a, b) { return b.currentLevel - a.currentLevel })
+  return players.slice(0, howMany)
+}
+
 // =====================================================
 // CALCULAR DEMANDA TOTAL DE UMA FASE (todos planetas objetivo)
 // =====================================================
@@ -207,7 +224,7 @@ function drawPlatoonList() {
 
     if (hasRoster) {
       var analysis = analyzePlanetPlatoon(name, requirements, relicMin, rosterMap, activePlanets)
-      _renderWithRoster(div, header, name, analysis.results, analysis.fasesDisponiveis)
+      _renderWithRoster(div, header, name, analysis.results, analysis.fasesDisponiveis, relicMin, rosterMap)
     } else {
       _renderManual(div, header, name, planetState, requirements)
     }
@@ -219,7 +236,7 @@ function drawPlatoonList() {
 // =====================================================
 // RENDER COM ROSTER REAL
 // =====================================================
-function _renderWithRoster(div, header, name, results, fasesDisponiveis) {
+function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMin, rosterMap) {
   // Classificar por relevância
   var missing    = results.filter(function(r) { return r.status === 'missing' })
   var impossible = results.filter(function(r) { return r.status === 'impossible' })
@@ -276,14 +293,30 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis) {
     var color, icon, sub
 
     if (r.status === 'missing') {
+      var faltamN = r.needed
+      var pedirN = faltamN + Math.ceil(faltamN / 3)
+      var closest = getClosestPlayers(r.id, relicMin, rosterMap, pedirN)
+      var closestTxt = closest.map(function(p) {
+        return p.name + ' (R' + p.currentLevel + ')'
+      }).join(', ')
       color = "#f87171"; icon = "\u274c"
-      sub = "nenhum jogador \u2014 pedir " + r.request
+      sub = "nenhum \u2014 pedir " + pedirN + (closestTxt ? ": " + closestTxt : "")
     } else if (r.status === 'impossible') {
+      var faltamI = r.faltam
+      var pedirI = faltamI + Math.ceil(faltamI / 3)
+      var closestI = getClosestPlayers(r.id, relicMin, rosterMap, pedirI)
+      var closestTxtI = closestI.filter(function(p) { return !p.meetsReq })
+        .map(function(p) { return p.name + ' (R' + p.currentLevel + ')' }).join(', ')
       color = "#f97316"; icon = "\u274c"
-      sub = r.have + '/' + r.needed + ' jogadores \u2014 faltam ' + r.faltam + ', pedir ' + r.request
-    } else { // prealoca
+      sub = r.have + '/' + r.needed + ' \u2014 faltam ' + faltamI + (closestTxtI ? '. Pedir: ' + closestTxtI : '')
+    } else {
+      var faltamP = Math.max(1, r.needed - r.have)
+      var pedirP = faltamP + Math.ceil(faltamP / 3)
+      var closestP = getClosestPlayers(r.id, relicMin, rosterMap, pedirP)
+      var closestTxtP = closestP.filter(function(p) { return !p.meetsReq })
+        .map(function(p) { return p.name + ' (R' + p.currentLevel + ')' }).join(', ')
       color = "#fbbf24"; icon = "\u26a0"
-      sub = r.have + '/' + r.needed + ' jogadores \u2014 alocar antecipadamente'
+      sub = r.have + '/' + r.needed + (closestTxtP ? ' \u2014 pedir: ' + closestTxtP : '')
     }
 
     lista += '<div style="color:' + color + ';font-size:11px;margin-bottom:3px;">'
