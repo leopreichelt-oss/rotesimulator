@@ -1,20 +1,17 @@
 /**
  * guildEngine.js
  * Busca dados da guilda via Cloudflare Worker → Railway Comlink → API oficial do jogo
- * Fluxo: allyCode → playerId + guildId → membros da guilda
  */
 
 var COMLINK_URL = 'https://worker-lively-heart-f0a0.leopreichelt.workers.dev'
 
 var guildEngine = {
 
-  // Dado um allycode, retorna info da guilda e lista de membros
-  // callback(err, { guildId, guildName, totalGP, playerCount, members:[{name,playerId,allyCode,gp}] })
   fetchFromAllycode: function(allycode, callback) {
     var cleanCode = String(allycode).replace(/\D/g, '')
     if (!cleanCode) return callback('Allycode inválido')
 
-    // Passo 1: buscar dados do jogador para pegar guildId e playerId
+    // Passo 1: buscar dados do jogador para pegar guildId
     fetch(COMLINK_URL + '/player', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +24,7 @@ var guildEngine = {
 
       if (!guildId) return callback('Jogador não está em uma guilda')
 
-      // Passo 2: buscar membros da guilda
+      // Passo 2: buscar dados da guilda
       return fetch(COMLINK_URL + '/guild', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,6 +32,10 @@ var guildEngine = {
       })
       .then(function(r) { return r.json() })
       .then(function(d) {
+        var profile = d.guild.profile
+        var totalGP = Number(profile.guildGalacticPower) || 0
+        var memberCount = Number(profile.memberCount) || d.guild.member.length
+
         var members = d.guild.member.map(function(m) {
           return {
             name: m.playerName,
@@ -43,13 +44,11 @@ var guildEngine = {
           }
         })
 
-        var totalGP = members.reduce(function(s, m) { return s + m.gp }, 0)
-
         callback(null, {
           guildId: guildId,
-          guildName: guildName,
+          guildName: profile.name || guildName,
           totalGP: totalGP,
-          playerCount: members.length,
+          playerCount: memberCount,
           members: members
         })
       })
