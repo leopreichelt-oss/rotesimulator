@@ -1,13 +1,36 @@
 /**
  * rosterEngine.js
- * Coleta roster completo via Cloudflare Worker → Railway Comlink → API oficial do jogo
+ * Coleta roster via Cloudflare Worker → Railway Comlink → API do jogo
  *
  * relic_tier no Comlink: relic.currentTier
- * R5 = currentTier 7, R6 = 8, R7 = 9, R8 = 10, R9 = 11
- * Naves: definitionId contém ':FLEET' ou combat_type === 2
+ * R5=7, R6=8, R7=9, R8=10, R9=11
+ * Naves identificadas pela lista SHIP_IDS
  */
 
 var COMLINK_URL = 'https://worker-lively-heart-f0a0.leopreichelt.workers.dev'
+
+// IDs de naves conhecidas no ROTE (extraídas do platoonRequirements)
+var SHIP_IDS = {
+  "CAPITALCHIMAERA":1,"CAPITALEXECUTOR":1,"CAPITALFINALIZER":1,
+  "CAPITALJEDICRUISER":1,"CAPITALLEVIATHAN":1,"CAPITALMALEVOLENCE":1,
+  "CAPITALMONCALAMARICRUISER":1,"CAPITALNEGOTIATOR":1,"CAPITALPROFUNDITY":1,
+  "CAPITALRADDUS":1,"CAPITALSTARDESTROYER":1,"COMMANDSHUTTLE":1,
+  "EBONHAWK":1,"EMPERORSSHUTTLE":1,"FURYCLASSINTERCEPTOR":1,
+  "GAUNTLETSTARFIGHTER":1,"GEONOSIANSTARFIGHTER2":1,"GEONOSIANSTARFIGHTER3":1,
+  "GHOST":1,"HOUNDSTOOTH":1,"HYENABOMBER":1,"IDENVERSIOEMPIRE":1,
+  "IG2000":1,"JEDISTARFIGHTERANAKIN":1,"JEDISTARFIGHTERCONSULAR":1,
+  "MG100STARFORTRESSSF17":1,"MILLENNIUMFALCON":1,"MILLENNIUMFALCONPRISTINE":1,
+  "OUTRIDER":1,"PHANTOM2":1,"RAVENSCLAW":1,"RAZORCREST":1,
+  "SCYTHE":1,"SITHBOMBER":1,"SITHFIGHTER":1,"SITHINFILTRATOR":1,
+  "SITHPALPATINE":1,"SITHSUPREMACYCLASS":1,"SLAVE1":1,"SMUGGLERCHEWBACCA":1,
+  "STAP":1,"TIEADVANCED":1,"TIEBOMBERIMPERIAL":1,"TIEDAGGER":1,
+  "TIEFIGHTERFIRSTORDER":1,"TIEFIGHTERFOSF":1,"TIEFIGHTERIMPERIAL":1,
+  "TIEFIGHTERPILOT":1,"TIEINTERCEPTOR":1,"TIEREAPER":1,"TIESILENCER":1,
+  "TRIPLEZERO":1,"UMBARANSTARFIGHTER":1,"UWINGROGUEONE":1,"UWINGSCARIF":1,
+  "VULTUREDROID":1,"XANADUBLOOD":1,"XWINGBLACKONE":1,"XWINGRED2":1,
+  "XWINGRED3":1,"XWINGRESISTANCE":1,"YWINGCLONEWARS":1,"YWINGREBEL":1,
+  "FIRSTORDERTIEECHELON":1,"BT1":1,"COMEUPPANCE":1
+}
 
 var rosterEngine = {
 
@@ -17,6 +40,10 @@ var rosterEngine = {
   toRelicLevel: function(relicTier) {
     if (!relicTier || relicTier < 3) return 0
     return relicTier - 2
+  },
+
+  isShip: function(baseId) {
+    return !!SHIP_IDS[baseId]
   },
 
   meetsRequirement: function(unit, relicMin) {
@@ -32,24 +59,31 @@ var rosterEngine = {
     })
     .then(function(r) { return r.json() })
     .then(function(d) {
-      // Nome real vem do endpoint /player individual
       var playerName = d.name || fallbackName || playerId
 
       var units = (d.rosterUnit || []).map(function(u) {
         var defId = u.definitionId || ''
-        var isShip = defId.indexOf(':FLEET') !== -1 || defId.indexOf(':SHIP') !== -1
+        var baseId = defId.split(':')[0]
+        // Rarity vem do definitionId: UNIT:THREE_STAR → 3
+        var rarityMap = {
+          'ONE_STAR':1,'TWO_STAR':2,'THREE_STAR':3,
+          'FOUR_STAR':4,'FIVE_STAR':5,'SIX_STAR':6,'SEVEN_STAR':7
+        }
+        var rarityStr = defId.split(':')[1] || ''
+        var rarity = rarityMap[rarityStr] || u.currentRarity || 0
+
         return {
-          base_id:     defId.split(':')[0],
+          base_id:     baseId,
           relic_tier:  u.relic ? (u.relic.currentTier || 0) : 0,
-          rarity:      u.currentRarity || 0,
-          combat_type: isShip ? 2 : 1,
+          rarity:      rarity,
+          combat_type: rosterEngine.isShip(baseId) ? 2 : 1,
           level:       u.currentLevel || 0
         }
       })
 
       callback(null, { playerId: playerId, name: playerName, units: units })
     })
-    .catch(function(e) { callback('Erro ' + fallbackName + ': ' + e.message) })
+    .catch(function(e) { callback('Erro ' + (fallbackName||playerId) + ': ' + e.message) })
   },
 
   fetchAll: function(members, onProgress, onDone) {
@@ -83,8 +117,8 @@ var rosterEngine = {
 
   load: function() {
     try {
-      var data = localStorage.getItem(rosterEngine.STORAGE_KEY)
-      return data ? JSON.parse(data) : null
+      var d = localStorage.getItem(rosterEngine.STORAGE_KEY)
+      return d ? JSON.parse(d) : null
     } catch(e) { return null }
   },
 
@@ -95,6 +129,7 @@ var rosterEngine = {
     } catch(e) { return null }
   },
 
+  // Para cada slot do platoon, retorna quais jogadores têm o personagem no nível mínimo
   checkAvailability: function(rosterMap, platoonSlots, relicMin) {
     var availability = {}
     platoonSlots.forEach(function(slot) {
@@ -103,7 +138,7 @@ var rosterEngine = {
       Object.values(rosterMap).forEach(function(player) {
         var unit = player.units.find(function(u) { return u.base_id === unitId })
         if (unit && rosterEngine.meetsRequirement(unit, relicMin)) {
-          availability[unitId].push({ name: player.name, playerId: player.playerId })
+          availability[unitId].push(player.name)
         }
       })
     })
