@@ -29,7 +29,7 @@ simulateExtraPlanetStars()
 drawGalaxyMap()
 drawPlanetList()
 drawPhaseList()
-drawPlatoonList()
+if (typeof drawPlatoonList === 'function') drawPlatoonList()
 updateStarCounter()
 
 drawROTEHistory()
