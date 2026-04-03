@@ -176,3 +176,144 @@ Arquivos: core/phaseEngine.js, ui/drawPhaseList.js, ui/phaseGuide.js
   → Fase 6: sem menção a carry (fase final)
 - Aplica apenas em fases com 2 ou 3 planetas
 - Avisos aparecem na UI, roteiro da fase e briefing para oficiais
+
+================================================================================
+[02/04/2026] — PLATOON CHECKER + ROSTER ENGINE (branch feature/platoon-checker → merge main)
+================================================================================
+
+INFRAESTRUTURA NOVA:
+  - Railway (railway.app): deploy do SWGoH Comlink via Docker Image
+      ghcr.io/swgoh-utils/swgoh-comlink:latest
+      URL: swgoh-comlink-production-81bf.up.railway.app
+      APP_NAME=rotesimulator | ATENÇÃO: trial 30 dias/$5 — renovar antes de expirar
+  - Cloudflare Worker (gratuito, permanente): proxy CORS para GitHub Pages → Comlink
+      URL: worker-lively-heart-f0a0.leopreichelt.workers.dev
+  - GitHub repo auxiliar: leopreichelt-oss/swgoh-comlink (Dockerfile do Comlink)
+
+NOVOS ARQUIVOS:
+  data/unitNames.js
+    - 207 IDs de personagens/naves mapeados para nomes em português
+    - Extraídos do platoonRequirements.js (cobertura 100%)
+    - getUnitName(id) → nome legível
+
+  data/platoonRequirements.js
+    - 1800 slots: 6 fases × 20 planetas × 6 ops × 15 slots
+    - Fonte: EchoBase via scraping (extensão Claude in Chrome)
+    - platoonRequirements["F1_DS"][1] → [{unitId, slot}]
+
+  core/guildEngine.js
+    - allycode → /player (Comlink) → guild_id
+    - guild_id → /guild (Comlink) → membros [{name, playerId, gp}]
+    - GP total via profile.guildGalacticPower (string → Number)
+
+  core/rosterEngine.js
+    - playerId → /player (Comlink) → roster completo
+    - relic: definitionId "UNIT:SEVEN_STAR" → rarity=7
+    - relic_tier: currentTier - 2 (ex: 8 → R6)
+    - SHIP_IDS: 69 naves identificadas por base_id (combat_type=2)
+      Inclui: ARC170CLONESERGEANT, ARC170REX, BLADEOFDORIN (corrigidos)
+    - Delay 200ms entre chamadas
+    - Persistência: localStorage rote_roster_v2
+    - getClosestPlayers(unitId, relicMin, rosterMap, N):
+        Retorna N jogadores que TÊM o personagem mas ABAIXO do relic mínimo
+        Ordenados por relic atual decrescente (mais próximos primeiro)
+
+  ui/settingsPanel.js
+    - Botão "⚙ Settings" no header abre painel flutuante
+    - Campo: allycode de qualquer membro da guilda
+    - "Sincronizar Guilda e Roster": busca guilda + coleta roster (~2 min para 39 jogadores)
+    - Preenche automaticamente: PG Guilda, Jogadores
+    - Mantém manual: Inativos, Margem de segurança, Crescimento diário
+
+  ui/drawPlatoonList.js
+    - Coluna direita: análise de platoons por planeta configurado no mapa
+    - Ordenados por fase (phase do state.planets)
+
+    Funções principais:
+      calcDemandaPorFase(fase, allActivePlanets)
+        Soma slots necessários de todos os planetas objetivo da fase
+      analyzePlanetPlatoon(planetName, requirements, relicMin, rosterMap, allActivePlanets)
+        Para cada personagem: needed, have, fasesNecessarias, status
+      getClosestPlayers(unitId, relicMin, rosterMap, howMany)
+        Lista quem tem o personagem abaixo do mínimo (candidatos a farm)
+
+    Lógica de fases:
+      fasesDisponiveis = phase_objetivo - tier + 1
+      Ex: Geonosis (tier=2, fase=4) → 3 fases disponíveis
+
+      Conflito entre planetas:
+        Demanda total da fase = soma de todos os planetas objetivo da fase
+        Planeta em análise subtrai sua própria demanda para evitar dupla contagem
+        Ex: Dathomir e Tatooine ambos na F6 competem pelo Darth Malgus
+
+      completaNaFaseObj = se os jogadores disponíveis na fase objetivo sozinha
+        já cobrem os slots necessários (sem precisar de fases anteriores)
+
+    Status por personagem:
+      ok        → completa em 1 fase sem conflito
+      normal    → completa na fase objetivo (sem pré-alocação)
+      prealoca  → precisa de fases anteriores para acumular slots
+      impossible → não completa nem com todas as fases disponíveis
+      missing   → nenhum jogador tem o personagem no relic mínimo
+
+    Apresentação:
+      ✅ Verde escuro  → ok/normal: "Platoons completos em 1 fase"
+      ✅ Verde claro   → prealoca: "Completável em N fase(s) — alocar antecipadamente"
+                         + lista personagens com jogadores mais próximos
+      🟠 Laranja       → impossible: "X/Y — faltam N, pedir: Jogador (Ratual)"
+      ❌ Vermelho      → missing: "nenhum — pedir N: Jogador1 (R3), Jogador2 (R2)"
+
+    Quantidade de jogadores a pedir: N + ceil(N/3)
+      Ex: falta 1 → pedir 2 | falta 6 → pedir 8
+
+ALTERAÇÕES EM ARQUIVOS EXISTENTES:
+  index.html
+    - Botão "⚙ Settings" adicionado no header
+    - div#settingsPanel adicionado (painel flutuante)
+    - Ordem de carregamento dos scripts:
+        data/unitNames.js → data/platoonRequirements.js → core/guildEngine.js
+        → core/rosterEngine.js → ui/drawPlatoonList.js → ui/settingsPanel.js
+  core/calculations.js
+    - drawPlatoonList() adicionado (com typeof check)
+  app.js
+    - drawPlatoonList() adicionado ao window.onload (com typeof check)
+  style.css
+    - .right { display:none } removido → coluna direita ativa
+
+================================================================================
+PENDÊNCIAS / PRÓXIMOS PASSOS (ordem de prioridade)
+================================================================================
+
+1. REFATORAÇÃO DO HEADER
+   - Remover linha manual: PG Guilda, Jogadores, Inativos, Margem, Crescimento
+   - Settings passa a ser ponto central de configuração
+   - Manter manual: Inativos, Margem de segurança, Crescimento diário
+
+2. INATIVOS AUTOMÁTICO
+   - Usar lastActivityTime do Comlink como indicativo de inatividade
+   - Exibir data de última atividade por jogador no painel Settings
+
+3. FARM LIST — PLATOONS
+   - Lista de personagens a desenvolver para completar platoons
+   - Baseada nos status missing e impossible do platoon checker
+   - Mostra: personagem, relic necessário, jogadores mais próximos, fases afetadas
+   - Acessível na coluna de platoons
+
+4. CONTADOR DE BATALHAS POSSÍVEIS (branch separado)
+   - Calcular batalhas que a guilda consegue fazer por planeta/fase
+   - Baseado em times disponíveis com relic mínimo
+   - Substitui campo manual "Batalhas possíveis" no box do planeta
+
+5. FARM LIST — BATALHAS
+   - Lista de personagens/times a desenvolver para aumentar batalhas possíveis
+   - Separada da farm list de platoons
+
+6. INFRAESTRUTURA — RAILWAY TRIAL
+   - Trial expira em 30 dias/$5 — renovar ou migrar para Render/Northflank (gratuito)
+   - Cloudflare Worker é gratuito permanentemente, não precisa renovar
+
+================================================================================
+BUGS / COMPORTAMENTOS A VERIFICAR (pendentes desde sessões anteriores)
+================================================================================
+  - applyGPGrowth: crescimento de GP fase a fase durante o evento
+  - Early battles/platoons: regras 4.a até 4.e do documento original
