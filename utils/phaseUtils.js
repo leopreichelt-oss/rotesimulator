@@ -81,7 +81,10 @@ function getProjectedGP(){
   let inactive =
     Number(document.getElementById("inactive").value) || 0
 
-  let activePlayers = players - inactive
+  let safe =
+    Number(document.getElementById("safe").value) || 0
+
+  let activePlayers = Math.max(0, players - inactive - safe)
 
   let dailyGrowthPerPlayer =
     Number(document.getElementById("dailyGrowth")?.value) || 5500
@@ -182,7 +185,11 @@ function applyGPGrowth(guildGP, players, phase){
   let inactive =
     Number(document.getElementById("inactive").value) || 0
 
-  let activePlayers = players - inactive
+  let safe =
+    Number(document.getElementById("safe").value) || 0
+
+  // crescimento apenas nos jogadores plenamente ativos (exclui inativos e margem)
+  let activePlayers = Math.max(0, players - inactive - safe)
 
   let dailyGrowthPerPlayer =
     Number(document.getElementById("dailyGrowth")?.value) || 5500

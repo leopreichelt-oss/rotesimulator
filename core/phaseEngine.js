@@ -472,8 +472,8 @@ let tier = getPlanetTier(name)
 
 let p = state.planets[name] || {}
 
-let battlesPossible = Number(p.battles) || 0
-let platoons = Number(p.platoons) || 0
+let battlesPossible = p.autoBattles !== undefined ? Number(p.autoBattles) : (Number(p.battles) || 0)
+let platoons = p.autoPlatoons !== undefined ? Number(p.autoPlatoons) : (Number(p.platoons) || 0)
 
 let safeBattles = Math.floor(battlesPossible * 0.8)
 

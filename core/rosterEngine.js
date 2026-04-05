@@ -37,6 +37,8 @@ var rosterEngine = {
 
   STORAGE_KEY: 'rote_roster_v2',
   STORAGE_DATE_KEY: 'rote_roster_date_v2',
+  ACTIVITY_KEY: 'rote_activity_v1',
+  GUILD_GP_KEY: 'rote_guild_gp_v1',
 
   toRelicLevel: function(relicTier) {
     if (!relicTier || relicTier < 3) return 0
@@ -121,6 +123,46 @@ var rosterEngine = {
       var d = localStorage.getItem(rosterEngine.STORAGE_KEY)
       return d ? JSON.parse(d) : null
     } catch(e) { return null }
+  },
+
+  // Salva mapa de atividade { playerId: 'ativo'|'margem'|'inativo' }
+  saveActivity: function(activityMap) {
+    try { localStorage.setItem(rosterEngine.ACTIVITY_KEY, JSON.stringify(activityMap)) } catch(e) {}
+  },
+
+  loadActivity: function() {
+    try {
+      var d = localStorage.getItem(rosterEngine.ACTIVITY_KEY)
+      return d ? JSON.parse(d) : {}
+    } catch(e) { return {} }
+  },
+
+  // Salva GP real por jogador { playerId: gp }
+  saveGuildGP: function(gpMap) {
+    try { localStorage.setItem(rosterEngine.GUILD_GP_KEY, JSON.stringify(gpMap)) } catch(e) {}
+  },
+
+  loadGuildGP: function() {
+    try {
+      var d = localStorage.getItem(rosterEngine.GUILD_GP_KEY)
+      return d ? JSON.parse(d) : {}
+    } catch(e) { return {} }
+  },
+
+  // Retorna rosterMap excluindo inativos E margem identificada
+  // (margem não contribui com platoons/batalhas — GP já foi descontado individualmente)
+  loadActive: function() {
+    var rosterMap = rosterEngine.load()
+    if (!rosterMap) return null
+    var activity = rosterEngine.loadActivity()
+    var result = {}
+    Object.keys(rosterMap).forEach(function(pid) {
+      var status = activity[pid]
+      if (status !== 'inativo' && status !== 'margem') {
+        result[pid] = rosterMap[pid]
+      }
+    })
+    return result
   },
 
   lastSyncDate: function() {

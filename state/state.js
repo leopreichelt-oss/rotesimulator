@@ -25,3 +25,4 @@ selectedPlanet:null,
 specialMission:{}
 }
 state.historyMode = false
+state.simulationMode = (localStorage.getItem('rote_simmode') === '1')

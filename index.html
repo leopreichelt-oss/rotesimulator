@@ -10,22 +10,29 @@
 <body>
 
 <header>
+<div id="simHeaderFields">
 <label>PG Guilda <input id="guildGP" value="326610750"></label>
 <label>Jogadores <input id="players" value="41"></label>
 <label>Inativos <input id="inactive" value="2"></label>
 <label>Margem segurança <input id="safe" value="3"></label>
 <label>Crescimento diário/jogador <input id="dailyGrowth" type="number" value="5500"></label>
+</div>
 
 <div id="gpProjectionInfo"></div>
 
 <div>
-PG ativo mínimo
-<div id="activeGPmin">0</div>
+PG Total
+<div id="totalGP" style="color:#4ade80;font-weight:bold;">0</div>
 </div>
 
 <div>
 PG ativo máximo
-<div id="activeGPmax">0</div>
+<div id="activeGPmax" style="color:#4da6ff;">0</div>
+</div>
+
+<div>
+PG ativo mínimo
+<div id="activeGPmin" style="color:#c2410c;">0</div>
 </div>
 
 <div class="starCounter" id="starResult"></div>
@@ -33,7 +40,7 @@ PG ativo máximo
 <button onclick="handleBriefing(); generateOfficerBriefing();">
 Briefing para oficiais
 </button>
-<!-- após o botão "Briefing para oficiais" -->
+<button id="btnSimMode" onclick="toggleSimMode()" title="Modo simulação: editar dados manualmente">⚗ Simulação</button>
 <button onclick="toggleSettingsPanel()">⚙ Settings</button>
 
 <div id="settingsPanel" style="display:none;position:absolute;top:60px;right:10px;width:280px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:14px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
@@ -64,7 +71,7 @@ Briefing para oficiais
         <h3 id="planetFloatName">Planeta</h3>
 
         <label>Fase
-          <select id="planetPhase">
+          <select id="planetPhase" onchange="updatePlanetPlatoonStatus()">
             <option value="">—</option>
             <option value="1">F1</option>
             <option value="2">F2</option>
@@ -75,13 +82,17 @@ Briefing para oficiais
           </select>
         </label>
 
+        <div id="planetPlatoonStatus" style="font-size:11px;margin:4px 0;min-height:16px;"></div>
+
         <label>Batalhas possíveis
           <input id="possibleBattles" type="number">
         </label>
 
+        <div id="planetSimFields">
         <label>Platoons
           <input id="platoons" type="number" min="0" max="6">
         </label>
+        </div>
 
         <label id="specialMissionBox" style="display:none">
           Missão especial

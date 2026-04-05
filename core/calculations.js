@@ -18,6 +18,10 @@ p.carryIn = 0
 
 let gp = calculateActiveGP()
 
+// Atualizar batalhas e platoons automáticos (antes da simulação)
+if (typeof updateAutoBattlesInState === 'function') updateAutoBattlesInState()
+if (typeof updateAutoPlatoonsInState === 'function') updateAutoPlatoonsInState()
+
 let results = runROTESimulation(gp)
 
 state.results = results
@@ -50,11 +54,44 @@ let safe = Number(document.getElementById("safe").value)
 
 let gpPerPlayer = guildGP / players
 
-let activePlayersMax = players - inactive
-let activePlayersMin = players - inactive - safe
+// Tentar usar GP real dos jogadores identificados pelo sync
+let gpMap      = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadGuildGP()  : {}
+let activityMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActivity() : {}
+let hasRealGP  = gpMap && Object.keys(gpMap).length > 0
 
-let activeGPmax = gpPerPlayer * activePlayersMax
-let activeGPmin = gpPerPlayer * activePlayersMin
+let gpInativos = 0       // soma real dos inativos
+let gpMargem   = 0       // soma real da margem identificada
+let margemIdentCount = 0 // quantos jogadores de margem foram identificados
+
+if (hasRealGP) {
+  Object.keys(activityMap).forEach(function(pid) {
+    var status = activityMap[pid]
+    var gp = gpMap[pid] || 0
+    if (status === 'inativo') gpInativos += gp
+    if (status === 'margem')  { gpMargem += gp; margemIdentCount++ }
+  })
+}
+
+let margemGenerica = Math.max(0, safe - margemIdentCount)
+
+let activeGPmax, activeGPmin
+
+if (hasRealGP) {
+  // máximo: desconta GP real apenas dos inativos
+  activeGPmax = guildGP - gpInativos
+  // mínimo: desconta inativos + margem identificada (real) + margem genérica (média)
+  activeGPmin = guildGP - gpInativos - gpMargem - (gpPerPlayer * margemGenerica)
+} else {
+  // fallback: comportamento anterior (GP médio para todos)
+  activeGPmax = gpPerPlayer * Math.max(0, players - inactive)
+  activeGPmin = gpPerPlayer * Math.max(0, players - inactive - safe)
+}
+
+activeGPmax = Math.max(0, activeGPmax)
+activeGPmin = Math.max(0, activeGPmin)
+
+let totalGPEl = document.getElementById("totalGP")
+if (totalGPEl) totalGPEl.innerText = formatNumber(guildGP)
 
 document.getElementById("activeGPmax").innerText =
 formatNumber(activeGPmax)

@@ -38,6 +38,50 @@ function togglePlatoonExpand(key) {
 }
 
 // =====================================================
+// COMPUTAR BATALHAS AUTOMÁTICAS NO STATE (modo real)
+// usa active players * battleMultiplier do planeta
+// =====================================================
+function updateAutoBattlesInState() {
+  // TODO: quando contador automático de batalhas for implementado,
+  // preencher state.planets[name].autoBattles com o valor real por planeta.
+  // Enquanto isso, autoBattles permanece undefined e planetEngine usa battles (manual).
+}
+
+// =====================================================
+// COMPUTAR E ARMAZENAR PLATOONS AUTOMÁTICOS NO STATE
+// (chamado pelo calculate() antes do runROTESimulation)
+// =====================================================
+function updateAutoPlatoonsInState() {
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+  if (!rosterMap || Object.keys(rosterMap).length === 0) return
+
+  var activePlanets = Object.keys(state.planets)
+    .filter(function(name) { return state.planets[name] && state.planets[name].phase })
+
+  activePlanets.forEach(function(name) {
+    var tier = getPlanetTier(name)
+    var relicMin = TIER_RELIC[tier] || 5
+    var platoonKey = PLANET_PLATOON_KEY[name]
+    var requirements = platoonKey ? platoonRequirements[platoonKey] : null
+    if (!requirements) return
+
+    var totalOps = Object.keys(requirements).length
+    var completableOps = 0
+
+    for (var op = 1; op <= totalOps; op++) {
+      var slots = requirements[op] || []
+      var opComplete = slots.every(function(slot) {
+        var id = slot.unitId || slot
+        return countPlayersWithUnit(id, relicMin, rosterMap) >= 1
+      })
+      if (opComplete) completableOps++
+    }
+
+    state.planets[name].autoPlatoons = completableOps
+  })
+}
+
+// =====================================================
 // CONTAR JOGADORES COM UM PERSONAGEM NO RELIC MÍNIMO
 // =====================================================
 function countPlayersWithUnit(unitId, relicMin, rosterMap) {
@@ -194,8 +238,20 @@ function drawPlatoonList() {
     return
   }
 
-  var rosterMap = (typeof rosterEngine !== "undefined") ? rosterEngine.load() : null
+  var rosterMapFull = (typeof rosterEngine !== "undefined") ? rosterEngine.load() : null
+  var rosterMap = (typeof rosterEngine !== "undefined") ? rosterEngine.loadActive() : null
   var hasRoster = rosterMap && Object.keys(rosterMap).length > 0
+
+  // Mostrar aviso de jogadores excluídos
+  var fullCount = rosterMapFull ? Object.keys(rosterMapFull).length : 0
+  var activeCount = rosterMap ? Object.keys(rosterMap).length : 0
+  var excludedCount = fullCount - activeCount
+  if (excludedCount > 0) {
+    var notice = document.createElement('div')
+    notice.style.cssText = 'font-size:10px;color:#f59e0b;margin-bottom:8px;padding:4px 6px;background:#78350f22;border-radius:4px;border-left:2px solid #f59e0b;'
+    notice.textContent = '⚠ ' + excludedCount + ' jogador(es) excluído(s) da análise (inativos/margem)'
+    container.appendChild(notice)
+  }
 
   activePlanets.forEach(function(name) {
     var planetState = state.planets[name]

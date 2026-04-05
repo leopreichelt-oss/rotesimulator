@@ -34,7 +34,7 @@ let carryIn = planet.carryIn || 0
 
 let tier = getPlanetTier(name)
 
-let battles = Number(planet.battles) || 0
+let battles = planet.autoBattles !== undefined ? Number(planet.autoBattles) : (Number(planet.battles) || 0)
 
 let planetsInPhase = getPlanetsOfPhase(phase).length || 1
 
@@ -50,7 +50,9 @@ console.log("BATTLES INPUT", name, {
 // PLATOONS
 // ----------------------
 
-let platoonOps = Number(planet.platoons) || 0
+let platoonOps = planet.autoPlatoons !== undefined
+  ? Number(planet.autoPlatoons)
+  : Number(planet.platoons) || 0
 
 let platoonScore =
 platoonOps * PLATOON_REWARD[tier]

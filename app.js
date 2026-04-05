@@ -2,6 +2,7 @@ window.onload = function(){
   drawPlanetList()
   drawGalaxyMap()
   loadState()
+  if (typeof applySimMode === 'function') applySimMode()
   calculate()
   drawROTEHistory()
   updateGPProjectionDisplay()

@@ -28,7 +28,7 @@ var guildEngine = {
       return fetch(COMLINK_URL + '/guild', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload: { guildId: guildId } })
+        body: JSON.stringify({ payload: { guildId: guildId, includeRecentGuildActivityInfo: true } })
       })
       .then(function(r) { return r.json() })
       .then(function(d) {
@@ -37,10 +37,14 @@ var guildEngine = {
         var memberCount = Number(profile.memberCount) || d.guild.member.length
 
         var members = d.guild.member.map(function(m) {
+          // lastActivityTime pode vir em ms (>1e12) ou segundos
+          var lat = m.lastActivityTime ? Number(m.lastActivityTime) : null
+          if (lat && lat < 1e12) lat = lat * 1000  // normalizar para ms
           return {
             name: m.playerName,
             playerId: m.playerId,
-            gp: Number(m.galacticPower) || 0
+            gp: Number(m.galacticPower) || 0,
+            lastActivityTime: lat
           }
         })
 

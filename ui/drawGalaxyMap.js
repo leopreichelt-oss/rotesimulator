@@ -72,6 +72,10 @@ node.onclick = function(e){
   document.getElementById("possibleBattles").value = planetState.battles || 0
   document.getElementById("platoons").value = planetState.platoons || 0
 
+  // Aplicar visibilidade do modo simulação e status de platoon
+  if (typeof applySimMode === 'function') applySimMode()
+  if (typeof updatePlanetPlatoonStatus === 'function') updatePlanetPlatoonStatus()
+
   document.querySelectorAll(".planetNode")
     .forEach(p => p.classList.remove("planetSelected"))
   node.classList.add("planetSelected")
