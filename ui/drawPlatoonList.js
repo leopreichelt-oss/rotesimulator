@@ -593,7 +593,8 @@ function _copyFarmListToClipboard() {
     3: '🔵 CRESCIMENTO — Próximo tier'
   }
 
-  [1, 2, 3].forEach(function(g) {
+  var grupos = [1, 2, 3]
+  grupos.forEach(function(g) {
     if (!groupLines[g] || groupLines[g].length === 0) return
     lines.push(groupLabels[g])
     groupLines[g].forEach(function(l) { lines.push(l) })
@@ -601,16 +602,63 @@ function _copyFarmListToClipboard() {
   })
 
   var text = lines.join('\n')
+  _showFarmModal(text)
+}
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(function() {
-      _showCopyToast('✅ Lista copiada! (' + Object.keys(assignedPlayers).length + ' jogadores)')
-    }).catch(function() {
-      _fallbackCopy(text)
-    })
-  } else {
-    _fallbackCopy(text)
+function _showFarmModal(text) {
+  // Remove modal anterior se existir
+  var old = document.getElementById('farmModal')
+  if (old) old.remove()
+
+  var overlay = document.createElement('div')
+  overlay.id = 'farmModal'
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;'
+
+  var box = document.createElement('div')
+  box.style.cssText = 'background:#0f172a;border:1px solid #334155;border-radius:10px;padding:20px;width:540px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;'
+
+  var titleRow = document.createElement('div')
+  titleRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;'
+  titleRow.innerHTML = '<span style="color:#e2e8f0;font-weight:bold;font-size:13px;">📋 Farm List</span>'
+
+  var closeBtn = document.createElement('button')
+  closeBtn.textContent = '✕'
+  closeBtn.style.cssText = 'background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:0 4px;'
+  closeBtn.onclick = function() { overlay.remove() }
+  titleRow.appendChild(closeBtn)
+
+  var ta = document.createElement('textarea')
+  ta.value = text
+  ta.readOnly = true
+  ta.style.cssText = 'width:100%;flex:1;min-height:320px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:10px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box;'
+
+  var copyBtn = document.createElement('button')
+  copyBtn.textContent = '📋 Copiar tudo'
+  copyBtn.style.cssText = 'padding:8px 16px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;'
+  copyBtn.onclick = function() {
+    ta.select()
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        copyBtn.textContent = '✅ Copiado!'
+        setTimeout(function() { copyBtn.textContent = '📋 Copiar tudo' }, 2000)
+      })
+    } else {
+      try { document.execCommand('copy'); copyBtn.textContent = '✅ Copiado!'; setTimeout(function() { copyBtn.textContent = '📋 Copiar tudo' }, 2000) } catch(e) {}
+    }
   }
+
+  box.appendChild(titleRow)
+  box.appendChild(ta)
+  box.appendChild(copyBtn)
+  overlay.appendChild(box)
+
+  // Fechar ao clicar fora
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove() }
+
+  document.body.appendChild(overlay)
+
+  // Selecionar o texto automaticamente
+  setTimeout(function() { ta.select() }, 50)
 }
 
 function _fallbackCopy(text) {
