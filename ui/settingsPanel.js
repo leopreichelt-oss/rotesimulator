@@ -295,6 +295,11 @@ function syncGuild() {
             return
           }
 
+          // Calcular batalhas elegíveis por planeta para todos os jogadores ativos
+          if (typeof combatEngine !== 'undefined') {
+            combatEngine.computeAndStore(rosterMap)
+          }
+
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
           setTimeout(function() {
             renderSettingsPanel()

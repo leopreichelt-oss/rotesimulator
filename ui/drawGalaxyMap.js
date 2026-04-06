@@ -75,6 +75,7 @@ node.onclick = function(e){
   // Aplicar visibilidade do modo simulação e status de platoon
   if (typeof applySimMode === 'function') applySimMode()
   if (typeof updatePlanetPlatoonStatus === 'function') updatePlanetPlatoonStatus()
+  if (typeof updatePlanetBattleInfo === 'function') updatePlanetBattleInfo(name)
 
   document.querySelectorAll(".planetNode")
     .forEach(p => p.classList.remove("planetSelected"))

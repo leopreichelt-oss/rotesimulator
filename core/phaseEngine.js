@@ -221,8 +221,17 @@ results.push(result)
 // CALCULAR BATALHAS NO NÍVEL DA FASE
 // ----------------------
 
-let totalBattlesPossible = results.reduce((s,p) => s + (state.planets[p.name]?.battles || 0), 0)
-let totalSafeBattles = Math.floor(totalBattlesPossible * 0.8)
+// Batalhas: usa autoBattles (de combatData) se disponível, senão manual
+// autoBattles já é o safeBattles calculado (squad + ship * 0.8), sem especiais
+let totalBattlesPossible = results.reduce((s,p) => {
+  let pl = state.planets[p.name] || {}
+  let val = pl.autoBattles !== undefined ? Number(pl.autoBattles) : (Number(pl.battles) || 0)
+  return s + val
+}, 0)
+let totalSafeBattles = totalBattlesPossible  // autoBattles já é safe; manual aplica 0.8
+if (results.some(p => (state.planets[p.name]?.autoBattles === undefined))) {
+  totalSafeBattles = Math.floor(totalBattlesPossible * 0.8)
+}
 
 let totalCarryInPhase = phasePlanets.reduce((s, name) => s + (state.planets[name]?.carryIn || 0), 0)
 let totalPlatoonPhase = results.reduce((s,p) => s + (p.platoonScore || 0), 0)

@@ -281,34 +281,150 @@ ALTERAÇÕES EM ARQUIVOS EXISTENTES:
     - .right { display:none } removido → coluna direita ativa
 
 ================================================================================
+[05/04/2026] — INATIVOS AUTOMÁTICO + GP ATIVO + MODO SIMULAÇÃO + COMBAT ENGINE
+================================================================================
+
+INATIVOS E MARGEM AUTOMÁTICOS (core/guildEngine.js, ui/settingsPanel.js):
+
+  core/guildEngine.js
+    - Adicionado includeRecentGuildActivityInfo: true no payload da chamada /guild
+      → Habilita o campo lastActivityTime nos membros (era null sem esse flag)
+    - Normalização de lastActivityTime: se valor < 1e12, multiplica por 1000 (ms)
+    - Membros agora incluem { name, playerId, gp, lastActivityTime }
+
+  ui/settingsPanel.js
+    - computeActivityStatus(members): classifica cada membro como
+        ativo    → atividade < 3 dias atrás
+        margem   → atividade entre 1–3 dias atrás
+        inativo  → atividade > 3 dias atrás (ou sem registro)
+    - _buildActivityRows(): exibe apenas inativos e margem no painel
+    - togglePlayerStatus(playerId): cicla ativo→margem→inativo→ativo (manual override)
+    - _saveAndApplyActivity(): persiste mapa de atividade, dispara recalculate+drawPlatoonList
+    - Ao sincronizar: salva gpMap = {playerId: gp} via rosterEngine.saveGuildGP()
+    - Após fetchAll completo: chama combatEngine.computeAndStore(rosterMap)
+
+  core/rosterEngine.js
+    - saveActivity() / loadActivity(): persiste {playerId: 'ativo'|'margem'|'inativo'}
+    - saveGuildGP() / loadGuildGP(): persiste {playerId: realGP}
+    - loadActive(): exclui tanto 'inativo' quanto 'margem' do roster para análise de platoons
+
+GP ATIVO MÁXIMO E MÍNIMO (core/calculations.js, index.html):
+
+  Fórmulas implementadas:
+    PG Total       = guildGP (exibido em verde)
+    PG ativo máx   = guildGP − GP_real(inativos identificados)          [azul]
+    PG ativo mín   = guildGP − GP_real(inativos) − GP_real(margem identificada)
+                     − (GP_médio × margem_genérica)                     [laranja escuro]
+
+    margemGenerica = max(0, margem_input − qtd_margem_identificada)
+    GP_médio = guildGP / totalJogadores
+
+  index.html
+    - Adicionado campo #totalGP (verde), #activeGPmax (azul), #activeGPmin (#c2410c)
+
+MODO SIMULAÇÃO (state/state.js, index.html, ui/handlers.js):
+
+  state/state.js
+    - state.simulationMode = (localStorage.getItem('rote_simmode') === '1')
+      → persiste entre recargas
+
+  index.html
+    - Botão "⚗ Simulação" (#btnSimMode) no header
+    - Campos manuais do header envolvidos em #simHeaderFields (ocultos em modo real)
+    - Box do planeta: #planetSimFields envolve campo de platoons (oculto em modo real)
+    - #possibleBattlesLabel (batalhas manuais) oculto em modo real
+
+  ui/handlers.js
+    - toggleSimMode(): alterna state.simulationMode e persiste
+    - applySimMode(): mostra/oculta #simHeaderFields, #planetSimFields, #possibleBattlesLabel
+      e estiliza botão (roxo em modo simulação)
+    - savePlanet():
+        simulação → lê batalhas do input manual com validação de máximo
+        real      → lê autoBattles do state (calculado pelo combatEngine)
+
+  app.js
+    - applySimMode() chamado no window.onload
+
+COMBAT DATA E MISSÕES (data/combatData.js, assets/maps/):
+
+  data/combatData.js (novo arquivo)
+    - PLANET_MAP_URL: mapa de nomes de planetas para imagens locais em assets/maps/
+    - PLANET_COMBAT_DATA: 20 planetas, 98 missões classificadas por tipo
+        squad / ship / special
+        Campos por missão: n, req, type, waves, eligibleCount, ineligibleCount
+        Campos opcionais: relicBonus, unlocks, winsRequired, reward
+    - Missões especiais identificadas (1 por jogador total, não por fase):
+        Corellia M4, Bracca M5, Dathomir M5, Tatooine M5+M6,
+        Kashyyyk M5, Zeffo M4, Haven M4, Kessel M3, Vandor M1
+    - computePlanetBattles(planetName): retorna
+        { squadBattles, shipBattles, specialBattles, totalScoreBattles, safeBattles }
+        safeBattles = floor(80% × (squad + ship)) — especiais excluídas do safe
+
+  assets/maps/ (novo diretório)
+    - 20 imagens PNG dos mapas: Mustafar, Corellia, Coruscant, Geonosis, Felucia,
+      Bracca, Dathomir, Tatooine, Kashyyyk, Haven-class_Medical_Station, Kessel,
+      Lothal, Malachor, Vandor, Ring_of_Kafrene, Death_Star, Hoth, Scarif, Zeffo, Mandalore
+
+  ui/handlers.js (updatePlanetBattleInfo)
+    - Exibe contagem squad/ship/special e safe battles no box do planeta
+    - Em modo real: usa combatEngine.load() (por jogador elegível)
+    - Fallback: computePlanetBattles (sem roster)
+    - Link "🗺 Ver mapa do planeta" visível quando imagem disponível
+
+COMBAT ENGINE — CONTADOR POR JOGADOR (core/combatEngine.js):
+
+  core/combatEngine.js (novo arquivo)
+    - COMBAT_MISSION_REQS: requisitos por missão para todos os 20 planetas
+        keyUnit: null          → qualquer jogador ativo é elegível
+        keyUnit: ['UNITID']    → precisa de ao menos 1 desses personagens no relic mínimo
+        requireAll: true       → precisa de TODOS os personagens listados
+        isShip: true           → verifica raridade 7★ em vez de relic
+    - IDs mapeados: LORDVADER, DOCTORAPHRA, GRANDINQUISITOR, MERRIN, QIRA,
+      YOUNGHAN, YOUNGCHEWBACCA, CEREJUNDA, BOKATAN, L3_37, VADER, SCYTHE,
+      CAPITALEXECUTOR, CAPITALPROFUNDITY, CAPITALNEGOTIATOR, GHOST, OUTRIDER,
+      MILLENNIUMFALCON, TIEFIGHTERIMPERIAL, GAUNTLETSTARFIGHTER, BT1, K2SO,
+      PAO, BAZEMALBUS, CHIRRUTIMWE e outros
+    - TODO (null = all active): JABBATHEHUTT, FENNECSHAND, SAWGERRERA, THIRDSISTER, Cal Kestis
+
+    Funções:
+      _playerHasUnit(player, unitId, minRelic, isShip)
+        → verifica se jogador tem o personagem/nave no requisito mínimo
+      _playerEligible(player, missionReq, minRelic)
+        → verifica elegibilidade completa para uma missão
+      computeForPlanet(planetName, rosterMap, minRelic)
+        → por missão: conta quantos jogadores ativos são elegíveis (não quantidade de times)
+        → retorna { missions[], squadBattles, shipBattles, specialBattles,
+                    totalScoreBattles, safeBattles }
+      computeAndStore(rosterMap)
+        → itera todos os 20 planetas, salva resultado em localStorage rote_combat_battles_v1
+      load()
+        → retorna dados armazenados { planetName: { missions[], safeBattles, ... } }
+
+  Integração:
+    - index.html: <script src="core/combatEngine.js"> após rosterEngine.js
+    - settingsPanel.js onDone: combatEngine.computeAndStore(rosterMap) ao fim da sincronização
+    - drawPlatoonList.js updateAutoBattlesInState():
+        lê combatEngine.load() em modo real (preferência)
+        fallback para computePlanetBattles se combatEngine não disponível
+
+================================================================================
 PENDÊNCIAS / PRÓXIMOS PASSOS (ordem de prioridade)
 ================================================================================
 
-1. REFATORAÇÃO DO HEADER
-   - Remover linha manual: PG Guilda, Jogadores, Inativos, Margem, Crescimento
-   - Settings passa a ser ponto central de configuração
-   - Manter manual: Inativos, Margem de segurança, Crescimento diário
+1. UNIT IDs PENDENTES NO COMBAT ENGINE
+   - Confirmar IDs: JABBATHEHUTT, FENNECSHAND, SAWGERRERA, THIRDSISTER/REVA, Cal Kestis
+   - Atualmente usam null (conta todos os jogadores ativos como elegíveis)
 
-2. INATIVOS AUTOMÁTICO
-   - Usar lastActivityTime do Comlink como indicativo de inatividade
-   - Exibir data de última atividade por jogador no painel Settings
-
-3. FARM LIST — PLATOONS
+2. FARM LIST — PLATOONS
    - Lista de personagens a desenvolver para completar platoons
    - Baseada nos status missing e impossible do platoon checker
    - Mostra: personagem, relic necessário, jogadores mais próximos, fases afetadas
-   - Acessível na coluna de platoons
 
-4. CONTADOR DE BATALHAS POSSÍVEIS (branch separado)
-   - Calcular batalhas que a guilda consegue fazer por planeta/fase
-   - Baseado em times disponíveis com relic mínimo
-   - Substitui campo manual "Batalhas possíveis" no box do planeta
-
-5. FARM LIST — BATALHAS
+3. FARM LIST — BATALHAS
    - Lista de personagens/times a desenvolver para aumentar batalhas possíveis
-   - Separada da farm list de platoons
+   - Baseada nos ineligibleCount do combatEngine por missão
 
-6. INFRAESTRUTURA — RAILWAY TRIAL
+4. INFRAESTRUTURA — RAILWAY TRIAL
    - Trial expira em 30 dias/$5 — renovar ou migrar para Render/Northflank (gratuito)
    - Cloudflare Worker é gratuito permanentemente, não precisa renovar
 

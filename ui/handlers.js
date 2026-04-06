@@ -20,18 +20,23 @@ let pData = planetData[name]
 let battles = 0
 let platoons = 0
 
-// Batalhas: sempre manual até contador automático ser implementado
-battles = parseInt(document.getElementById("possibleBattles").value) || 0
-
-let players = Number(document.getElementById("players").value)
-let inactive = Number(document.getElementById("inactive").value)
-let activePlayers = players - inactive
-let multiplier = pData.battleMultiplier || 5
-let maxBattles = activePlayers * multiplier
-
-if(battles > maxBattles){
-  alert("Máximo de batalhas para este planeta: " + maxBattles)
-  return
+if (state.simulationMode) {
+  // Modo simulação: batalhas manuais com validação de máximo
+  battles = parseInt(document.getElementById("possibleBattles").value) || 0
+  let players = Number(document.getElementById("players").value)
+  let inactive = Number(document.getElementById("inactive").value)
+  let activePlayers = players - inactive
+  let multiplier = pData.battleMultiplier || 5
+  let maxBattles = activePlayers * multiplier
+  if(battles > maxBattles){
+    alert("Máximo de batalhas para este planeta: " + maxBattles)
+    return
+  }
+} else {
+  // Modo real: batalhas vêm do combatEngine (autoBattles no state)
+  battles = state.planets[name]?.autoBattles !== undefined
+    ? Number(state.planets[name].autoBattles)
+    : (state.planets[name]?.battles || 0)
 }
 
 if (state.simulationMode) {
@@ -95,6 +100,7 @@ function applySimMode() {
   var simFields = document.getElementById('simHeaderFields')
   var btn = document.getElementById('btnSimMode')
   var planetSimFields = document.getElementById('planetSimFields')
+  var battlesLabel = document.getElementById('possibleBattlesLabel')
 
   if (simFields) simFields.style.display = state.simulationMode ? '' : 'none'
   if (btn) {
@@ -102,6 +108,59 @@ function applySimMode() {
     btn.style.color = state.simulationMode ? '#fff' : ''
   }
   if (planetSimFields) planetSimFields.style.display = state.simulationMode ? '' : 'none'
+  if (battlesLabel) battlesLabel.style.display = state.simulationMode ? '' : 'none'
+}
+
+// ----------------------
+// BATALHAS DO PLANETA (combat data)
+// ----------------------
+
+function updatePlanetBattleInfo(name) {
+  var infoEl   = document.getElementById('planetBattleInfo')
+  var mapLink  = document.getElementById('planetMapLink')
+  var battleInput = document.getElementById('possibleBattles')
+  var battleLabel = document.getElementById('possibleBattlesLabel')
+
+  if (!infoEl) return
+
+  // Link do mapa
+  if (mapLink && typeof PLANET_MAP_URL !== 'undefined' && PLANET_MAP_URL[name]) {
+    mapLink.href = PLANET_MAP_URL[name]
+    mapLink.style.display = 'block'
+  } else if (mapLink) {
+    mapLink.style.display = 'none'
+  }
+
+  var b = null
+
+  // Em modo real: preferir dados do combatEngine (por jogador elegível)
+  if (!state.simulationMode && typeof combatEngine !== 'undefined') {
+    var stored = combatEngine.load()
+    b = stored[name] || null
+  }
+
+  // Fallback: computePlanetBattles (contagem por missão sem roster)
+  if (!b && typeof computePlanetBattles !== 'undefined') {
+    b = computePlanetBattles(name)
+  }
+
+  if (!b) { infoEl.innerHTML = ''; return }
+
+  // Em modo simulação: auto-preencher campo de batalhas com safeBattles
+  if (state.simulationMode && battleInput) {
+    battleInput.value = b.safeBattles
+    if (!state.planets[name]) state.planets[name] = {}
+    state.planets[name].battles = b.safeBattles
+  }
+
+  infoEl.innerHTML =
+    '<div style="background:#0f2744;border-radius:4px;padding:4px 6px;">' +
+      '<span style="color:#4da6ff;">⚔ ' + b.squadBattles + ' esquadrão</span>' +
+      ' &nbsp;' +
+      '<span style="color:#a78bfa;">🚀 ' + b.shipBattles + ' nave</span>' +
+      (b.specialBattles ? ' &nbsp;<span style="color:#94a3b8;">★ ' + b.specialBattles + ' especial</span>' : '') +
+      '<br><span style="color:#64748b;font-size:10px;">Safe: ' + b.safeBattles + ' &nbsp;|&nbsp; Total score: ' + b.totalScoreBattles + '</span>' +
+    '</div>'
 }
 
 // ----------------------

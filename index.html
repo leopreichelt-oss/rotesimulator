@@ -84,9 +84,16 @@ Briefing para oficiais
 
         <div id="planetPlatoonStatus" style="font-size:11px;margin:4px 0;min-height:16px;"></div>
 
-        <label>Batalhas possíveis
+        <div id="planetBattleInfo" style="font-size:11px;margin:4px 0;"></div>
+
+        <label id="possibleBattlesLabel">Batalhas possíveis (manual)
           <input id="possibleBattles" type="number">
         </label>
+
+        <a id="planetMapLink" href="#" target="_blank"
+           style="display:none;font-size:11px;color:#4da6ff;margin:4px 0;display:block;">
+          🗺 Ver mapa do planeta
+        </a>
 
         <div id="planetSimFields">
         <label>Platoons
@@ -112,6 +119,7 @@ Briefing para oficiais
 
 </div>
 <script src="data/rewards.js"></script>
+<script src="data/combatData.js"></script>
 <script src="data/planetData.js"></script>
 <script src="data/planetPositions.js"></script>
 <script src="data/unitNames.js"></script>
@@ -132,6 +140,7 @@ Briefing para oficiais
 <script src="core/calculations.js"></script>
 <script src="core/guildEngine.js"></script>
 <script src="core/rosterEngine.js"></script>
+<script src="core/combatEngine.js"></script>
 
 <script src="ui/drawPlanetList.js"></script>
 <script src="ui/drawGalaxyMap.js"></script>

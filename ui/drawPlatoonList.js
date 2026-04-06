@@ -42,9 +42,26 @@ function togglePlatoonExpand(key) {
 // usa active players * battleMultiplier do planeta
 // =====================================================
 function updateAutoBattlesInState() {
-  // TODO: quando contador automático de batalhas for implementado,
-  // preencher state.planets[name].autoBattles com o valor real por planeta.
-  // Enquanto isso, autoBattles permanece undefined e planetEngine usa battles (manual).
+  if (state.simulationMode) return  // modo simulação: usa valor manual
+
+  // Preferir dados do combatEngine (per-player eligibility) se disponível
+  if (typeof combatEngine !== 'undefined') {
+    var stored = combatEngine.load()
+    Object.keys(state.planets).forEach(function(name) {
+      if (!state.planets[name] || !state.planets[name].phase) return
+      var b = stored[name]
+      if (b) state.planets[name].autoBattles = b.safeBattles
+    })
+    return
+  }
+
+  // Fallback: computePlanetBattles (sem roster, conta missões apenas)
+  if (typeof computePlanetBattles === 'undefined') return
+  Object.keys(state.planets).forEach(function(name) {
+    if (!state.planets[name] || !state.planets[name].phase) return
+    var b = computePlanetBattles(name)
+    if (b) state.planets[name].autoBattles = b.safeBattles
+  })
 }
 
 // =====================================================
