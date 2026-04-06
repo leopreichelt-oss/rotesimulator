@@ -84,7 +84,17 @@ var rosterEngine = {
         }
       })
 
-      callback(null, { playerId: playerId, name: playerName, units: units })
+      // GAC / PSR
+      var pr = d.playerRating || {}
+      var psr = pr.playerSkillRating || {}
+      var prs = pr.playerRankStatus || {}
+      var gac = {
+        skillRating: psr.skillRating || 0,
+        leagueId:    prs.leagueId   || 'CARBONITE',
+        divisionId:  prs.divisionId || 5
+      }
+
+      callback(null, { playerId: playerId, name: playerName, units: units, gac: gac })
     })
     .catch(function(e) { callback('Erro ' + (fallbackName||playerId) + ': ' + e.message) })
   },

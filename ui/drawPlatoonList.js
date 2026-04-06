@@ -701,8 +701,72 @@ function _showCopyToast(msg) {
 }
 
 // =====================================================
-// FARM ESQUADRÕES/NAVES — placeholder até definição da lógica
+// FARM ESQUADRÕES/NAVES
 // =====================================================
 function _showSquadFarmModal() {
-  _showFarmModal('⚔️ Farm Esquadrões/Naves\n\n[Em construção — aguardando definição da lógica de GAC/TW]')
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+  if (!rosterMap || Object.keys(rosterMap).length === 0) {
+    _showCopyToast('❌ Sincronize o roster primeiro.')
+    return
+  }
+
+  if (typeof squadFarmEngine === 'undefined' || typeof SQUAD_META === 'undefined') {
+    _showCopyToast('❌ squadFarmEngine não carregado.')
+    return
+  }
+
+  var recommendations = squadFarmEngine.recommend(rosterMap)
+
+  if (recommendations.length === 0) {
+    _showFarmModal('⚔️ Farm Esquadrões/Naves\n\nNenhuma recomendação gerada.\nSincronize o roster para carregar os dados de GAC.')
+    return
+  }
+
+  var now = new Date()
+  var dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear()
+  var lines = ['⚔️ Farm Esquadrões/Naves — ' + dateStr, '']
+
+  // Agrupar por liga para melhor leitura
+  var byLeague = {}
+  recommendations.forEach(function(r) {
+    var ligaKey = r.leagueId + '_' + r.divisionId
+    if (!byLeague[ligaKey]) byLeague[ligaKey] = { label: squadFarmEngine.formatLeague(r.leagueId, r.divisionId), items: [] }
+    byLeague[ligaKey].items.push(r)
+  })
+
+  // Ordenar ligas do mais fraco ao mais forte
+  var leagueOrder = ['CARBONITE', 'BRONZIUM', 'CHROMIUM', 'AURODIUM', 'KYBER']
+  var sortedKeys = Object.keys(byLeague).sort(function(a, b) {
+    var la = a.split('_')[0], lb = b.split('_')[0]
+    var da = parseInt(a.split('_')[1]) || 5, db = parseInt(b.split('_')[1]) || 5
+    var li = leagueOrder.indexOf(la), lj = leagueOrder.indexOf(lb)
+    if (li !== lj) return li - lj
+    return da - db
+  })
+
+  sortedKeys.forEach(function(key) {
+    var group = byLeague[key]
+    lines.push('── ' + group.label + ' ──')
+    group.items.forEach(function(r) {
+      var evStr = []
+      if (r.squad.events.rote) evStr.push('ROTE')
+      if (r.squad.events.gac)  evStr.push('GAC')
+      if (r.squad.events.tw)   evStr.push('TW')
+      var relicRange = r.squad.isFleet ? '7★'
+        : 'mín R' + r.squad.minRelic + ' → ideal R' + r.squad.idealRelic
+
+      lines.push(r.player.name + ':')
+      lines.push('  Squad: ' + r.squad.name + ' [' + evStr.join('+') + ']')
+      lines.push('  Relic: ' + relicRange + '  |  ' + r.have + '/' + r.total + ' membros prontos')
+      if (r.membersNeeded.length > 0) {
+        lines.push('  Farmar: ' + r.membersNeeded.map(function(m) {
+          return m.name + ' (' + m.current + ' → ' + m.target + ')'
+        }).join(', '))
+      }
+      if (r.squad.note) lines.push('  Obs: ' + r.squad.note)
+      lines.push('')
+    })
+  })
+
+  _showFarmModal(lines.join('\n'))
 }
