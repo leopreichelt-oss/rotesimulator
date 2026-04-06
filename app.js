@@ -7,6 +7,8 @@ window.onload = function(){
   drawROTEHistory()
   updateGPProjectionDisplay()
   if (typeof drawPlatoonList === 'function') drawPlatoonList()
+  if (typeof drawFarmCritical === 'function') drawFarmCritical()
+  if (typeof drawFarmList === 'function') drawFarmList()
 }
 
 function togglePhaseDetails(phase, el){

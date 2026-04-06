@@ -34,8 +34,8 @@ var COMBAT_MISSION_REQS = {
     { n:1, keyUnit: ['DOCTORAPHRA'] },
     // M2 Any: qualquer
     { n:2, keyUnit: null },
-    // M3 Jabba: TODO confirmar ID
-    { n:3, keyUnit: null },  // TODO: ['JABBATHEHUTT'] quando confirmar ID
+    // M3 Jabba
+    { n:3, keyUnit: ['JABBATHEHUTT'] },
     // M4 Qi'ra + Young Han (especial): ambos necessários
     { n:4, keyUnit: ['QIRA', 'YOUNGHAN'], requireAll: true },
     // M5 Lando's MF: nave
@@ -71,8 +71,8 @@ var COMBAT_MISSION_REQS = {
     { n:2, keyUnit: ['HONDO'] },
     // M3 Any: qualquer
     { n:3, keyUnit: null },
-    // M4 Jabba: TODO confirmar ID
-    { n:4, keyUnit: null },  // TODO: ['JABBATHEHUTT']
+    // M4 Jabba
+    { n:4, keyUnit: ['JABBATHEHUTT'] },
     // M5 Any nave: qualquer
     { n:5, keyUnit: null, isShip: true }
   ],
@@ -84,8 +84,8 @@ var COMBAT_MISSION_REQS = {
     { n:3, keyUnit: null },
     // M4 nave LS
     { n:4, keyUnit: null, isShip: true },
-    // M5 especial Cal Kestis + Cere: ambos necessários. TODO confirmar IDs
-    { n:5, keyUnit: ['CEREJUNDA'] }  // TODO: adicionar ID de Cal Kestis
+    // M5 especial Cal Kestis + Cere: ambos necessários
+    { n:5, keyUnit: ['CALKESTIS', 'CEREJUNDA'], requireAll: true }
   ],
 
   "Dathomir": [
@@ -102,12 +102,12 @@ var COMBAT_MISSION_REQS = {
   "Tatooine": [
     // M1 Any: qualquer
     { n:1, keyUnit: null },
-    // M2 Jabba: TODO
-    { n:2, keyUnit: null },  // TODO: ['JABBATHEHUTT']
+    // M2 Jabba
+    { n:2, keyUnit: ['JABBATHEHUTT'] },
     // M3 Executor: nave
     { n:3, keyUnit: ['CAPITALEXECUTOR'], isShip: true },
-    // M4 Fennec: TODO confirmar ID
-    { n:4, keyUnit: null },  // TODO: ['FENNECSHAND']
+    // M4 Fennec
+    { n:4, keyUnit: ['FENNECSHAND'] },
     // M5 especial GI (Grande Inquisidor + Inquisitorius)
     { n:5, keyUnit: ['GRANDINQUISITOR'] },
     // M6 especial Bo'katan (desbloqueia Mandalore)
@@ -122,8 +122,8 @@ var COMBAT_MISSION_REQS = {
     { n:3, keyUnit: null },
     // M4 Profundity: nave
     { n:4, keyUnit: ['CAPITALPROFUNDITY'], isShip: true },
-    // M5 especial Saw Gerrera: TODO confirmar ID
-    { n:5, keyUnit: null }  // TODO: ['SAWGERRERA']
+    // M5 especial Saw Gerrera
+    { n:5, keyUnit: ['SAWGERRERA'] }
   ],
 
   "Haven Medical Station": [
@@ -131,8 +131,8 @@ var COMBAT_MISSION_REQS = {
     { n:1, keyUnit: null },
     { n:2, keyUnit: null },
     { n:3, keyUnit: null },
-    // M4 especial Reva (Third Sister): TODO confirmar ID
-    { n:4, keyUnit: null },  // TODO: ['THIRDSISTER'] ou ['REVA']
+    // M4 especial Reva (Third Sister)
+    { n:4, keyUnit: ['THIRDSISTER'] },
     // M5 Any DS: qualquer
     { n:5, keyUnit: null }
   ],
@@ -143,8 +143,8 @@ var COMBAT_MISSION_REQS = {
     { n:2, keyUnit: null },
     // M3 especial Qi'ra + L3-37
     { n:3, keyUnit: ['QIRA', 'L3_37'], requireAll: true },
-    // M4 Jabba: TODO
-    { n:4, keyUnit: null },  // TODO: ['JABBATHEHUTT']
+    // M4 Jabba
+    { n:4, keyUnit: ['JABBATHEHUTT'] },
     // M5 Ghost: nave
     { n:5, keyUnit: ['GHOST'], isShip: true }
   ],
@@ -155,7 +155,7 @@ var COMBAT_MISSION_REQS = {
     // M2 Any LS: qualquer
     { n:2, keyUnit: null },
     // M3 especial Phoenix (Hera Syndulla)
-    { n:3, keyUnit: null },  // TODO: ['HERASYNDULLA']
+    { n:3, keyUnit: ['HERASYNDULLAS3'] },
     // M4 Jedi: qualquer
     { n:4, keyUnit: null }
   ],
@@ -175,8 +175,8 @@ var COMBAT_MISSION_REQS = {
     // M2-3 Any: qualquer
     { n:2, keyUnit: null },
     { n:3, keyUnit: null },
-    // M4 Jabba: TODO
-    { n:4, keyUnit: null },  // TODO: ['JABBATHEHUTT']
+    // M4 Jabba
+    { n:4, keyUnit: ['JABBATHEHUTT'] },
     // M5 nave Any
     { n:5, keyUnit: null, isShip: true }
   ],
@@ -205,8 +205,8 @@ var COMBAT_MISSION_REQS = {
   ],
 
   "Hoth": [
-    // M1 Jabba: TODO
-    { n:1, keyUnit: null },  // TODO: ['JABBATHEHUTT']
+    // M1 Jabba
+    { n:1, keyUnit: ['JABBATHEHUTT'] },
     // M2-4 Any: qualquer
     { n:2, keyUnit: null },
     { n:3, keyUnit: null },
@@ -231,8 +231,8 @@ var COMBAT_MISSION_REQS = {
     // M1-2 Any LS: qualquer
     { n:1, keyUnit: null },
     { n:2, keyUnit: null },
-    // M3 JKCK (Cal Kestis): TODO confirmar ID
-    { n:3, keyUnit: ['CEREJUNDA'] },  // TODO: adicionar ID Cal Kestis
+    // M3 Cal Kestis + Cere Junda
+    { n:3, keyUnit: ['CALKESTIS', 'CEREJUNDA'], requireAll: true },
     // M4 especial Clone Troopers
     { n:4, keyUnit: ['CT7567', 'GENERALSKYWALKER'] },  // Rex ou GAS como representativo
     // M5 Negotiator: nave
