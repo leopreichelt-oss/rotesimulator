@@ -302,17 +302,27 @@ function drawPlatoonList() {
     container.appendChild(div)
   })
 
-  // Botão "Gerar lista de farm"
+  // Botões de farm
   if (hasRoster) {
     var btnDiv = document.createElement('div')
-    btnDiv.style.cssText = 'margin-top:12px;'
-    var btn = document.createElement('button')
-    btn.textContent = '📋 Gerar lista de farm'
-    btn.style.cssText = 'width:100%;padding:8px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;'
-    btn.onmouseover = function() { btn.style.background = '#1d4ed8' }
-    btn.onmouseout  = function() { btn.style.background = '#1e40af' }
-    btn.onclick = _copyFarmListToClipboard
-    btnDiv.appendChild(btn)
+    btnDiv.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:6px;'
+
+    var btn1 = document.createElement('button')
+    btn1.textContent = '📋 Farm de platoon'
+    btn1.style.cssText = 'width:100%;padding:8px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;'
+    btn1.onmouseover = function() { btn1.style.background = '#1d4ed8' }
+    btn1.onmouseout  = function() { btn1.style.background = '#1e40af' }
+    btn1.onclick = _copyFarmListToClipboard
+
+    var btn2 = document.createElement('button')
+    btn2.textContent = '⚔️ Farm esquadrões/naves'
+    btn2.style.cssText = 'width:100%;padding:8px;background:#065f46;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;'
+    btn2.onmouseover = function() { btn2.style.background = '#047857' }
+    btn2.onmouseout  = function() { btn2.style.background = '#065f46' }
+    btn2.onclick = function() { _showSquadFarmModal() }
+
+    btnDiv.appendChild(btn1)
+    btnDiv.appendChild(btn2)
     container.appendChild(btnDiv)
   }
 }
@@ -688,4 +698,11 @@ function _showCopyToast(msg) {
   toast.style.opacity = '1'
   clearTimeout(toast._timer)
   toast._timer = setTimeout(function() { toast.style.opacity = '0' }, 3000)
+}
+
+// =====================================================
+// FARM ESQUADRÕES/NAVES — placeholder até definição da lógica
+// =====================================================
+function _showSquadFarmModal() {
+  _showFarmModal('⚔️ Farm Esquadrões/Naves\n\n[Em construção — aguardando definição da lógica de GAC/TW]')
 }
