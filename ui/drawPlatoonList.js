@@ -39,12 +39,10 @@ function togglePlatoonExpand(key) {
 
 // =====================================================
 // COMPUTAR BATALHAS AUTOMÁTICAS NO STATE (modo real)
-// usa active players * battleMultiplier do planeta
 // =====================================================
 function updateAutoBattlesInState() {
-  if (state.simulationMode) return  // modo simulação: usa valor manual
+  if (state.simulationMode) return
 
-  // Preferir dados do combatEngine (per-player eligibility) se disponível
   if (typeof combatEngine !== 'undefined') {
     var stored = combatEngine.load()
     Object.keys(state.planets).forEach(function(name) {
@@ -55,7 +53,6 @@ function updateAutoBattlesInState() {
     return
   }
 
-  // Fallback: computePlanetBattles (sem roster, conta missões apenas)
   if (typeof computePlanetBattles === 'undefined') return
   Object.keys(state.planets).forEach(function(name) {
     if (!state.planets[name] || !state.planets[name].phase) return
@@ -65,8 +62,7 @@ function updateAutoBattlesInState() {
 }
 
 // =====================================================
-// COMPUTAR E ARMAZENAR PLATOONS AUTOMÁTICOS NO STATE
-// (chamado pelo calculate() antes do runROTESimulation)
+// COMPUTAR PLATOONS AUTOMÁTICOS NO STATE
 // =====================================================
 function updateAutoPlatoonsInState() {
   var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
@@ -110,18 +106,16 @@ function countPlayersWithUnit(unitId, relicMin, rosterMap) {
   }).length
 }
 
-
 // =====================================================
-// LISTAR JOGADORES MAIS PROXIMOS DE UM PERSONAGEM
+// LISTAR JOGADORES MAIS PROXIMOS (usado apenas na farm list)
 // =====================================================
 function getClosestPlayers(unitId, relicMin, rosterMap, howMany) {
-  // Retorna jogadores que NĀNO atendem o requisito, ordenados por nivel atual (mais próximos primeiro)
   var players = Object.values(rosterMap).map(function(player) {
     var unit = player.units.find(function(u) { return u.base_id === unitId })
     var isShip = unit && unit.combat_type === 2
     var currentLevel = unit ? (isShip ? unit.rarity : rosterEngine.toRelicLevel(unit.relic_tier)) : -1
     var meetsReq = unit ? (isShip ? unit.rarity >= 7 : currentLevel >= relicMin) : false
-    if (meetsReq) return null // já tem, não precisa listar
+    if (meetsReq) return null
     return { name: player.name, currentLevel: currentLevel, isShip: isShip }
   }).filter(Boolean)
   players.sort(function(a, b) { return b.currentLevel - a.currentLevel })
@@ -149,48 +143,61 @@ function calcDemandaPorFase(fase, allActivePlanets) {
 }
 
 // =====================================================
-// ANÁLISE DE PLATOON PARA UM PLANETA
-// fasesNecessarias vs fasesDisponiveis:
-//   = fasesDisponiveis → aloca na fase objetivo (normal, sem aviso)
-//   < fasesDisponiveis → pode pré-alocar em fases anteriores (informativo)
-//   > fasesDisponiveis → impossível (problema real)
+// ANÁLISE COMBINADA DE UM GRUPO DE PLANETAS (mesma fase)
+// Trata todos os planetas da fase como uma única unidade:
+//   needed = soma de slots de todos os planetas do grupo
+//   have   = jogadores que atendem o requisito (do tier mais alto do grupo)
+//   Status usa acumulação por fase igual ao analyzer individual
 // =====================================================
-function analyzePlanetPlatoon(planetName, requirements, relicMin, rosterMap, allActivePlanets) {
-  var phaseObjetivo = Number(state.planets[planetName].phase)
-  var tier = getPlanetTier(planetName)
-  var fasesAtivas = []
-  for (var f = tier; f <= phaseObjetivo; f++) fasesAtivas.push(f)
-  var fasesDisponiveis = fasesAtivas.length
+function analyzePhaseGroup(planetsInPhase, rosterMap, allActivePlanets) {
+  // Merge de todos os slots por personagem, usando o relicMin do planeta que exige
+  var unitNeeds = {}  // unitId → { needed, relicMin }
 
-  var unitSlots = {}
-  Object.keys(requirements).forEach(function(op) {
-    requirements[op].forEach(function(slot) {
-      var id = slot.unitId || slot
-      unitSlots[id] = (unitSlots[id] || 0) + 1
+  planetsInPhase.forEach(function(name) {
+    var tier = getPlanetTier(name)
+    var relicMin = TIER_RELIC[tier] || 5
+    var platoonKey = PLANET_PLATOON_KEY[name]
+    var requirements = platoonKey ? platoonRequirements[platoonKey] : null
+    if (!requirements) return
+    Object.keys(requirements).forEach(function(op) {
+      requirements[op].forEach(function(slot) {
+        var id = slot.unitId || slot
+        if (!unitNeeds[id]) unitNeeds[id] = { needed: 0, relicMin: relicMin }
+        unitNeeds[id].needed++
+        // Usar o maior relicMin (requisito mais exigente)
+        unitNeeds[id].relicMin = Math.max(unitNeeds[id].relicMin, relicMin)
+      })
     })
   })
 
+  var phaseObjetivo = Number(state.planets[planetsInPhase[0]].phase)
+  var minTier = Math.min.apply(null, planetsInPhase.map(getPlanetTier))
+
+  var fasesAtivas = []
+  for (var f = minTier; f <= phaseObjetivo; f++) fasesAtivas.push(f)
+  var fasesDisponiveis = fasesAtivas.length
+
   var results = []
 
-  Object.keys(unitSlots).forEach(function(id) {
-    var needed = unitSlots[id]
+  Object.keys(unitNeeds).forEach(function(id) {
+    var needed   = unitNeeds[id].needed
+    var relicMin = unitNeeds[id].relicMin
     var totalHave = countPlayersWithUnit(id, relicMin, rosterMap)
 
     if (totalHave === 0) {
-      var request = needed + Math.ceil(needed / 3)
-      results.push({ id:id, needed:needed, have:0, status:'missing', request:request })
+      results.push({ id: id, needed: needed, have: 0, relicMin: relicMin,
+        status: 'missing', request: needed + Math.ceil(needed / 3) })
       return
     }
 
-    // Calcular em quantas fases é possível completar
     var slotsAcumulados = 0
-    var fasesNecessarias = fasesDisponiveis + 1 // pessimista
+    var fasesNecessarias = fasesDisponiveis + 1
 
     for (var fi = 0; fi < fasesAtivas.length; fi++) {
       var fase = fasesAtivas[fi]
       var demandaFase = calcDemandaPorFase(fase, allActivePlanets)
-      // Demanda dos outros planetas objetivo (excluindo este planeta)
-      var demandaOutros = (demandaFase[id] || 0)
+      var demandaOutros = demandaFase[id] || 0
+      // Na fase objetivo: subtrair a demanda do próprio grupo (evita dupla contagem)
       if (fase === phaseObjetivo) demandaOutros = Math.max(0, demandaOutros - needed)
       var dispNaFase = Math.max(0, totalHave - demandaOutros)
       slotsAcumulados += dispNaFase
@@ -201,39 +208,39 @@ function analyzePlanetPlatoon(planetName, requirements, relicMin, rosterMap, all
     }
 
     if (fasesNecessarias <= fasesDisponiveis) {
-      // Verificar se completa somente na fase objetivo (sem precisar pre-alocar)
-      var dFaseObj = calcDemandaPorFase(phaseObjetivo, allActivePlanets)
-      var dOutrosFaseObj = Math.max(0, (dFaseObj[id] || 0) - needed)
-      var dispFaseObj = Math.max(0, totalHave - dOutrosFaseObj)
+      // Verificar se completa direto na fase objetivo
+      var dFaseObj   = calcDemandaPorFase(phaseObjetivo, allActivePlanets)
+      var dOutros    = Math.max(0, (dFaseObj[id] || 0) - needed)
+      var dispFaseObj = Math.max(0, totalHave - dOutros)
       var completaNaFaseObj = dispFaseObj >= needed
 
       results.push({
-        id: id,
-        needed: needed,
-        have: totalHave,
-        fasesNecessarias: fasesNecessarias,
-        fasesDisponiveis: fasesDisponiveis,
+        id: id, needed: needed, have: totalHave, relicMin: relicMin,
+        fasesNecessarias: fasesNecessarias, fasesDisponiveis: fasesDisponiveis,
         status: completaNaFaseObj && fasesNecessarias === 1 ? 'ok'
                : completaNaFaseObj ? 'normal'
                : 'prealoca'
       })
     } else {
-      // Impossível mesmo com todas as fases
       var faltam = needed - slotsAcumulados
-      var request2 = faltam + Math.ceil(faltam / 3)
       results.push({
-        id: id, needed: needed, have: totalHave,
-        faltam: faltam, request: request2,
+        id: id, needed: needed, have: totalHave, relicMin: relicMin,
+        faltam: faltam, request: faltam + Math.ceil(faltam / 3),
         status: 'impossible'
       })
     }
   })
 
-  return { results:results, fasesDisponiveis:fasesDisponiveis }
+  return { results: results, fasesDisponiveis: fasesDisponiveis }
+}
+
+// Mantido para compatibilidade (farmEngine e drawFarmCritical usam)
+function analyzePlanetPlatoon(planetName, requirements, relicMin, rosterMap, allActivePlanets) {
+  return analyzePhaseGroup([planetName], rosterMap, allActivePlanets)
 }
 
 // =====================================================
-// DESENHAR COLUNA DE PLATOONS
+// DESENHAR COLUNA DE PLATOONS — agrupado por fase
 // =====================================================
 function drawPlatoonList() {
   var container = document.getElementById("platoonList")
@@ -259,8 +266,8 @@ function drawPlatoonList() {
   var rosterMap = (typeof rosterEngine !== "undefined") ? rosterEngine.loadActive() : null
   var hasRoster = rosterMap && Object.keys(rosterMap).length > 0
 
-  // Mostrar aviso de jogadores excluídos
-  var fullCount = rosterMapFull ? Object.keys(rosterMapFull).length : 0
+  // Aviso de jogadores excluídos
+  var fullCount   = rosterMapFull ? Object.keys(rosterMapFull).length : 0
   var activeCount = rosterMap ? Object.keys(rosterMap).length : 0
   var excludedCount = fullCount - activeCount
   if (excludedCount > 0) {
@@ -270,101 +277,111 @@ function drawPlatoonList() {
     container.appendChild(notice)
   }
 
+  // Agrupar planetas por fase
+  var phaseGroups = {}
   activePlanets.forEach(function(name) {
-    var planetState = state.planets[name]
-    var phase = Number(planetState.phase)
-    var tier = getPlanetTier(name)
-    var relicMin = TIER_RELIC[tier] || 5
-    var platoonKey = PLANET_PLATOON_KEY[name]
-    var requirements = platoonKey ? platoonRequirements[platoonKey] : null
+    var phase = String(state.planets[name].phase)
+    if (!phaseGroups[phase]) phaseGroups[phase] = []
+    phaseGroups[phase].push(name)
+  })
 
+  var phases = Object.keys(phaseGroups).sort(function(a, b) { return Number(a) - Number(b) })
+
+  phases.forEach(function(phase) {
+    var planets = phaseGroups[phase]
     var div = document.createElement("div")
     div.style.cssText = "margin-bottom:10px;padding:8px;border-radius:6px;background:#1e3a5f;border-left:3px solid #334155;"
 
-    var fasesDisponiveis = Math.max(1, phase - tier + 1)
-    var fasesInfo = fasesDisponiveis > 1
-      ? ' <span style="color:#60a5fa;font-size:10px;">(' + fasesDisponiveis + ' fases disp.)</span>' : ''
-
-    var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
-      + 'F' + phase + ' \u2014 ' + name
-      + '<span style="color:#94a3b8;font-weight:normal;"> (R' + relicMin + '+)</span>'
-      + fasesInfo + '</div>'
-
-    if (!requirements) {
-      div.innerHTML = header + '<div style="color:#94a3b8;font-size:11px;">Sem dados de platoon.</div>'
-      container.appendChild(div)
-      return
-    }
-
     if (hasRoster) {
-      var analysis = analyzePlanetPlatoon(name, requirements, relicMin, rosterMap, activePlanets)
-      _renderWithRoster(div, header, name, analysis.results, analysis.fasesDisponiveis, relicMin, rosterMap)
+      var analysis = analyzePhaseGroup(planets, rosterMap, activePlanets)
+      _renderPhaseGroup(div, phase, planets, analysis)
     } else {
-      _renderManual(div, header, name, planetState, requirements)
+      _renderPhaseGroupManual(div, phase, planets)
     }
 
     container.appendChild(div)
   })
+
+  // Botão "Gerar lista de farm"
+  if (hasRoster) {
+    var btnDiv = document.createElement('div')
+    btnDiv.style.cssText = 'margin-top:12px;'
+    var btn = document.createElement('button')
+    btn.textContent = '📋 Gerar lista de farm'
+    btn.style.cssText = 'width:100%;padding:8px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;'
+    btn.onmouseover = function() { btn.style.background = '#1d4ed8' }
+    btn.onmouseout  = function() { btn.style.background = '#1e40af' }
+    btn.onclick = _copyFarmListToClipboard
+    btnDiv.appendChild(btn)
+    container.appendChild(btnDiv)
+  }
 }
 
 // =====================================================
-// RENDER COM ROSTER REAL
+// RENDER GRUPO DE FASE COM ROSTER
 // =====================================================
-function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMin, rosterMap) {
-  // Classificar por relevância
+function _renderPhaseGroup(div, phase, planets, analysis) {
+  var results = analysis.results
+  var fasesDisponiveis = analysis.fasesDisponiveis
+
+  // Header: F3: Felucia + Bracca (R7+) (2 fases disp.)
+  var maxRelicMin = Math.max.apply(null, planets.map(function(name) {
+    return TIER_RELIC[getPlanetTier(name)] || 5
+  }))
+  var fasesInfo = fasesDisponiveis > 1
+    ? ' <span style="color:#60a5fa;font-size:10px;">(' + fasesDisponiveis + ' fases disp.)</span>' : ''
+
+  var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
+    + 'F' + phase + ': ' + planets.join(' + ')
+    + ' <span style="color:#94a3b8;font-weight:normal;">(R' + maxRelicMin + '+)</span>'
+    + fasesInfo + '</div>'
+
   var missing    = results.filter(function(r) { return r.status === 'missing' })
   var impossible = results.filter(function(r) { return r.status === 'impossible' })
   var prealoca   = results.filter(function(r) { return r.status === 'prealoca' })
-  // 'ok' e 'normal' não aparecem — são situações sem problema
 
-  // VERDE: tudo ok (status ok ou normal)
+  // Tudo ok
   if (missing.length === 0 && impossible.length === 0 && prealoca.length === 0) {
     div.style.borderLeft = "3px solid #4ade80"
-    div.innerHTML = header + '<div style="color:#4ade80;">\u2705 Platoons completos em 1 fase</div>'
+    div.innerHTML = header + '<div style="color:#4ade80;">✅ Platoons completos em 1 fase</div>'
     return
   }
 
-  // VERDE CLARO: só tem "prealoca" — pode completar usando fases anteriores
+  // Só prealoca (verde claro)
   if (missing.length === 0 && impossible.length === 0) {
     var maxFases = Math.max.apply(null, prealoca.map(function(r) { return r.fasesNecessarias }))
     div.style.borderLeft = "3px solid #86efac"
     var statusLine = '<div style="color:#86efac;font-size:11px;margin-bottom:4px;">'
-      + '\u2705 Completável em ' + maxFases + ' fase(s) \u2014 alocar antecipadamente</div>'
+      + '✅ Completável em ' + maxFases + ' fase(s) — alocar antecipadamente</div>'
 
     var lista = '<div>'
     prealoca.forEach(function(r) {
-      var faltamP = Math.max(1, r.needed - r.have)
-      var pedirP = faltamP + Math.ceil(faltamP / 3)
-      var closestP = getClosestPlayers(r.id, relicMin, rosterMap, pedirP)
-      var closestTxtP = closestP.map(function(p) {
-        return p.name + ' (R' + p.currentLevel + ')'
-      }).join(', ')
       lista += '<div style="color:#fbbf24;font-size:11px;margin-bottom:2px;">'
-        + '\u26a0 ' + getUnitName(r.id)
-        + ' <span style="color:#64748b;">' + r.have + '/' + r.needed
-        + (closestTxtP ? ' \u2014 pedir: ' + closestTxtP : ' \u2014 alocar antecipadamente')
-        + '</span></div>'
+        + '⚠ ' + getUnitName(r.id)
+        + ' <span style="color:#64748b;">' + r.have + '/' + r.needed + '</span>'
+        + '</div>'
     })
     lista += '</div>'
     div.innerHTML = header + statusLine + lista
     return
   }
 
-  // VERMELHO/LARANJA: tem problemas reais
+  // Tem problemas reais
   var borderColor = missing.length > 0 ? "#f87171" : "#f97316"
   div.style.borderLeft = "3px solid " + borderColor
 
   var partes = []
-  if (missing.length > 0) partes.push(missing.length + ' sem ninguém na guilda')
+  if (missing.length > 0)    partes.push(missing.length + ' sem ninguém na guilda')
   if (impossible.length > 0) partes.push(impossible.length + ' impossíveis de completar')
-  if (prealoca.length > 0) partes.push(prealoca.length + ' precisam de pré-alocação')
+  if (prealoca.length > 0)   partes.push(prealoca.length + ' precisam de pré-alocação')
 
   var resumo = '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">'
-    + partes.join(' \u2014 ') + '</div>'
+    + partes.join(' — ') + '</div>'
 
+  var groupKey = planets.join('|')
   var allProblems = missing.concat(impossible).concat(prealoca)
   var PREVIEW = 5
-  var expanded = !!_platoonExpandState[name]
+  var expanded = !!_platoonExpandState[groupKey]
   var visible = expanded ? allProblems : allProblems.slice(0, PREVIEW)
 
   var lista = '<div>'
@@ -373,28 +390,15 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMi
     var color, icon, sub
 
     if (r.status === 'missing') {
-      var faltamN = r.needed
-      var pedirN = faltamN + Math.ceil(faltamN / 3)
-      var closest = getClosestPlayers(r.id, relicMin, rosterMap, pedirN)
-      var closestTxt = closest.map(function(p) {
-        return p.name + ' (R' + p.currentLevel + ')'
-      }).join(', ')
-      color = "#f87171"; icon = "\u274c"
-      sub = "nenhum \u2014 pedir " + pedirN + (closestTxt ? ": " + closestTxt : "")
+      color = "#f87171"; icon = "❌"
+      sub = "nenhum — precisa de " + r.request
     } else if (r.status === 'impossible') {
-      var faltamI = r.faltam
-      var pedirI = faltamI + Math.ceil(faltamI / 3)
-      var closestI = getClosestPlayers(r.id, relicMin, rosterMap, pedirI)
-      var closestTxtI = closestI.map(function(p) { return p.currentLevel >= 0 ? p.name + ' (R' + p.currentLevel + ')' : p.name + ' (sem o personagem)' }).join(', ')
-      color = "#f97316"; icon = "\u274c"
-      sub = r.have + '/' + r.needed + ' \u2014 faltam ' + faltamI + (closestTxtI ? '. Pedir: ' + closestTxtI : '')
+      color = "#f97316"; icon = "❌"
+      sub = r.have + '/' + r.needed + ' — faltam ' + r.faltam
     } else {
-      var faltamP = Math.max(1, r.needed - r.have)
-      var pedirP = faltamP + Math.ceil(faltamP / 3)
-      var closestP = getClosestPlayers(r.id, relicMin, rosterMap, pedirP)
-      var closestTxtP = closestP.map(function(p) { return p.currentLevel >= 0 ? p.name + ' (R' + p.currentLevel + ')' : p.name + ' (sem o personagem)' }).join(', ')
-      color = "#fbbf24"; icon = "\u26a0"
-      sub = r.have + '/' + r.needed + (closestTxtP ? ' \u2014 pedir: ' + closestTxtP : '')
+      // prealoca
+      color = "#fbbf24"; icon = "⚠"
+      sub = r.have + '/' + r.needed + ' — pré-alocar em ' + r.fasesNecessarias + ' fase(s)'
     }
 
     lista += '<div style="color:' + color + ';font-size:11px;margin-bottom:3px;">'
@@ -406,10 +410,10 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMi
   var btnHtml = ''
   if (allProblems.length > PREVIEW) {
     var resto = allProblems.length - PREVIEW
-    var btnLabel = expanded ? '\u25b2 ver menos' : '\u25bc +' + resto + ' outros'
-    var esc = name.replace(/'/g, "\\'")
+    var btnLabel = expanded ? '▲ ver menos' : '▼ +' + resto + ' outros'
+    var escapedKey = groupKey.replace(/'/g, "\\'")
     btnHtml = '<div style="margin-top:4px;">'
-      + '<button onclick="togglePlatoonExpand(\'' + esc + '\')"'
+      + '<button onclick="togglePlatoonExpand(\'' + escapedKey + '\')"'
       + ' style="background:none;border:none;color:#60a5fa;font-size:11px;cursor:pointer;padding:0;">'
       + btnLabel + '</button></div>'
   }
@@ -418,40 +422,57 @@ function _renderWithRoster(div, header, name, results, fasesDisponiveis, relicMi
 }
 
 // =====================================================
-// RENDER MANUAL (fallback sem roster)
+// RENDER MANUAL (fallback sem roster) — agrupado por fase
 // =====================================================
-function _renderManual(div, header, name, planetState, requirements) {
-  var totalOps = Object.keys(requirements).length
-  var platoons = Number(planetState.platoons) || 0
+function _renderPhaseGroupManual(div, phase, planets) {
+  var maxRelicMin = Math.max.apply(null, planets.map(function(name) {
+    return TIER_RELIC[getPlanetTier(name)] || 5
+  }))
+  var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
+    + 'F' + phase + ': ' + planets.join(' + ')
+    + ' <span style="color:#94a3b8;font-weight:normal;">(R' + maxRelicMin + '+)</span></div>'
 
-  if (platoons >= totalOps) {
+  // Merge de operações de todos os planetas
+  var allOpsCount = 0
+  var completedOps = 0
+  var missingUnits = {}
+
+  planets.forEach(function(name) {
+    var platoonKey = PLANET_PLATOON_KEY[name]
+    var requirements = platoonKey ? platoonRequirements[platoonKey] : null
+    if (!requirements) return
+    var totalOps = Object.keys(requirements).length
+    var platoons = Number((state.planets[name] || {}).platoons) || 0
+    allOpsCount += totalOps
+    completedOps += Math.min(platoons, totalOps)
+    for (var op = platoons + 1; op <= totalOps; op++) {
+      var slots = requirements[op] || []
+      slots.forEach(function(slot) {
+        var id = slot.unitId || slot
+        missingUnits[id] = (missingUnits[id] || 0) + 1
+      })
+    }
+  })
+
+  if (completedOps >= allOpsCount) {
     div.style.borderLeft = "3px solid #4ade80"
-    div.innerHTML = header + '<div style="color:#4ade80;">\u2705 Todos os platoons completos</div>'
+    div.innerHTML = header + '<div style="color:#4ade80;">✅ Todos os platoons completos</div>'
     return
   }
 
-  var borderColor = platoons === 0 ? "#f87171"
-    : platoons < Math.ceil(totalOps / 2) ? "#f97316" : "#facc15"
+  var borderColor = completedOps === 0 ? "#f87171"
+    : completedOps < Math.ceil(allOpsCount / 2) ? "#f97316" : "#facc15"
   div.style.borderLeft = "3px solid " + borderColor
-
-  var missingUnits = {}
-  for (var op = platoons + 1; op <= totalOps; op++) {
-    var slots = requirements[op] || []
-    slots.forEach(function(slot) {
-      var id = slot.unitId || slot
-      if (!missingUnits[id]) missingUnits[id] = 0
-      missingUnits[id]++
-    })
-  }
 
   var missingEntries = Object.entries(missingUnits)
   var total = missingEntries.length
   var PREVIEW = 5
-  var expanded = !!_platoonExpandState[name]
+  var groupKey = planets.join('|')
+  var expanded = !!_platoonExpandState[groupKey]
   var visible = expanded ? missingEntries : missingEntries.slice(0, PREVIEW)
 
   var resumo = '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">'
-    + platoons + '/' + totalOps + ' ops \u2014 '
+    + completedOps + '/' + allOpsCount + ' ops — '
     + '<strong style="color:#fcd34d;">' + total + ' personagens</strong>'
     + ' <span style="color:#475569;">(sem roster)</span></div>'
 
@@ -460,7 +481,7 @@ function _renderManual(div, header, name, planetState, requirements) {
     var id = entry[0], needed = entry[1]
     var request = needed + Math.ceil(needed / 3)
     lista += '<div style="color:#fcd34d;font-size:11px;margin-bottom:2px;">'
-      + '\u26a0 ' + getUnitName(id) + ' \xd7' + needed
+      + '⚠ ' + getUnitName(id) + ' ×' + needed
       + ' <span style="color:#94a3b8;">(pedir ' + request + ')</span></div>'
   })
   lista += '</div>'
@@ -468,13 +489,108 @@ function _renderManual(div, header, name, planetState, requirements) {
   var btnHtml = ''
   if (total > PREVIEW) {
     var resto = total - PREVIEW
-    var btnLabel = expanded ? '\u25b2 ver menos' : '\u25bc +' + resto + ' outros'
-    var esc = name.replace(/'/g, "\\'")
+    var btnLabel = expanded ? '▲ ver menos' : '▼ +' + resto + ' outros'
+    var escapedKey = groupKey.replace(/'/g, "\\'")
     btnHtml = '<div style="margin-top:4px;">'
-      + '<button onclick="togglePlatoonExpand(\'' + esc + '\')"'
+      + '<button onclick="togglePlatoonExpand(\'' + escapedKey + '\')"'
       + ' style="background:none;border:none;color:#60a5fa;font-size:11px;cursor:pointer;padding:0;">'
       + btnLabel + '</button></div>'
   }
 
   div.innerHTML = header + resumo + lista + btnHtml
+}
+
+// =====================================================
+// GERAR LISTA DE FARM PARA CLIPBOARD
+// =====================================================
+function _copyFarmListToClipboard() {
+  if (typeof farmEngine === 'undefined') return
+
+  var assignments = farmEngine.loadAssignments()
+  var noProgressIds = {}
+  if (typeof rosterEngine !== 'undefined') {
+    var rosterMap = rosterEngine.loadActive()
+    var progress = farmEngine.checkProgress(rosterMap)
+    progress.noProgress.forEach(function(p) { noProgressIds[p.playerId] = p.daysSince })
+  }
+
+  var now = new Date()
+  var dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear()
+
+  var lines = ['📋 Farm List ROTE — ' + dateStr, '']
+
+  var groups = { 1: [], 2: [], 3: [] }
+  Object.keys(assignments).forEach(function(pid) {
+    var a = assignments[pid]
+    var g = a.priority || 3
+    if (!groups[g]) groups[g] = []
+    groups[g].push({ pid: pid, a: a })
+  })
+
+  var groupLabels = {
+    1: '🔴 CRÍTICO — Planetas ativos',
+    2: '🟡 PRÓXIMO — Mesmo tier',
+    3: '🔵 CRESCIMENTO — Próximo tier'
+  }
+
+  [1, 2, 3].forEach(function(g) {
+    if (!groups[g] || groups[g].length === 0) return
+    lines.push(groupLabels[g])
+
+    // Ordenar por nome
+    groups[g].sort(function(a, b) {
+      return (a.a.playerName || '').localeCompare(b.a.playerName || '')
+    })
+
+    groups[g].forEach(function(entry) {
+      var a = entry.a
+      var uname = (typeof getUnitName === 'function') ? getUnitName(a.unitId) : a.unitId
+      var stuck = noProgressIds[entry.pid] !== undefined
+        ? ' ⚠ sem progresso (' + noProgressIds[entry.pid] + 'd)' : ''
+      lines.push('• ' + (a.playerName || entry.pid) + ' → ' + uname + ' R' + a.targetRelic + stuck)
+    })
+
+    lines.push('')
+  })
+
+  var text = lines.join('\n')
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      _showCopyToast('✅ Lista copiada para a área de transferência!')
+    }).catch(function() {
+      _fallbackCopy(text)
+    })
+  } else {
+    _fallbackCopy(text)
+  }
+}
+
+function _fallbackCopy(text) {
+  var ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;'
+  document.body.appendChild(ta)
+  ta.select()
+  try {
+    document.execCommand('copy')
+    _showCopyToast('✅ Lista copiada!')
+  } catch(e) {
+    _showCopyToast('❌ Não foi possível copiar automaticamente.')
+  }
+  document.body.removeChild(ta)
+}
+
+function _showCopyToast(msg) {
+  var toast = document.getElementById('copyToast')
+  if (!toast) {
+    toast = document.createElement('div')
+    toast.id = 'copyToast'
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e40af;color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;transition:opacity 0.3s;'
+    document.body.appendChild(toast)
+  }
+  toast.textContent = msg
+  toast.style.opacity = '1'
+  clearTimeout(toast._timer)
+  toast._timer = setTimeout(function() { toast.style.opacity = '0' }, 3000)
 }
