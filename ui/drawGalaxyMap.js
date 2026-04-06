@@ -49,7 +49,7 @@ node.onclick = function(e){
   let toggle = document.getElementById("specialMissionToggle")
 
   toggleBox.style.display = "none"
-  toggle.checked = false
+  toggle.value = ""
 
   let specialTarget = Object.keys(planetData).find(p => {
     return planetData[p].unlock === "specialMission"
@@ -57,8 +57,24 @@ node.onclick = function(e){
   })
 
   if(specialTarget){
-    toggleBox.style.display = "block"
-    toggle.checked = state.specialMission?.[name] === true
+    toggleBox.style.display = "flex"
+    var sm = state.specialMission?.[name]
+    // Compatibilidade: bool legado → trata true como 30
+    toggle.value = sm === true ? 30 : (Number(sm) || 0)
+
+    var statusEl = document.getElementById("specialMissionStatus")
+    if (statusEl) {
+      var victories = parseInt(toggle.value) || 0
+      if (victories >= 30) {
+        statusEl.textContent = "✅ " + specialTarget + " desbloqueado"
+        statusEl.style.color = "#4ade80"
+      } else if (victories > 0) {
+        statusEl.textContent = (30 - victories) + " para desbloquear " + specialTarget
+        statusEl.style.color = "#f59e0b"
+      } else {
+        statusEl.textContent = ""
+      }
+    }
   }
 
   if(!state.planets[name]){

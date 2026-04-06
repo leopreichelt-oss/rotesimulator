@@ -22,7 +22,9 @@ let p = planetData[name]
 if(!p) return false
 
 if(p.unlock === "specialMission"){
-return state.specialMission?.[p.missionPlanet] === true
+  var sm = state.specialMission?.[p.missionPlanet]
+  // Suporta tanto bool legado quanto número de vitórias
+  return sm === true || Number(sm) >= 30
 }
 
 if(!p.requirement) return true

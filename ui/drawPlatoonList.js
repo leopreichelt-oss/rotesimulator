@@ -318,6 +318,29 @@ function drawPlatoonList() {
 }
 
 // =====================================================
+// BANNER DE MISSÃO ESPECIAL (Bracca → Zeffo, Tatooine → Mandalore)
+// =====================================================
+function _specialMissionBanner(planets) {
+  var banners = []
+  planets.forEach(function(name) {
+    var bonusPlanet = Object.keys(typeof planetData !== 'undefined' ? planetData : {}).find(function(p) {
+      return planetData[p].unlock === 'specialMission' && planetData[p].missionPlanet === name
+    })
+    if (!bonusPlanet) return
+    var sm = state.specialMission ? state.specialMission[name] : null
+    var victories = sm === true ? 30 : (Number(sm) || 0)
+    var unlocked = victories >= 30
+    var color = unlocked ? '#4ade80' : '#f59e0b'
+    var icon  = unlocked ? '🔓' : '🔒'
+    var txt = unlocked
+      ? icon + ' ' + bonusPlanet + ' desbloqueado (' + victories + ' vitórias)'
+      : icon + ' Missão especial de ' + name + ': ' + victories + '/30 vitórias → libera ' + bonusPlanet
+    banners.push('<div style="font-size:10px;color:' + color + ';margin-top:3px;">' + txt + '</div>')
+  })
+  return banners.join('')
+}
+
+// =====================================================
 // RENDER GRUPO DE FASE COM ROSTER
 // =====================================================
 function _renderPhaseGroup(div, phase, planets, analysis) {
@@ -331,10 +354,13 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
   var fasesInfo = fasesDisponiveis > 1
     ? ' <span style="color:#60a5fa;font-size:10px;">(' + fasesDisponiveis + ' fases disp.)</span>' : ''
 
+  var specialBanner = _specialMissionBanner(planets)
+
   var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
     + 'F' + phase + ': ' + planets.join(' + ')
     + ' <span style="color:#94a3b8;font-weight:normal;">(R' + maxRelicMin + '+)</span>'
     + fasesInfo + '</div>'
+    + specialBanner
 
   var missing    = results.filter(function(r) { return r.status === 'missing' })
   var impossible = results.filter(function(r) { return r.status === 'impossible' })
@@ -464,7 +490,7 @@ function _renderPhaseGroupManual(div, phase, planets) {
     : completedOps < Math.ceil(allOpsCount / 2) ? "#f97316" : "#facc15"
   div.style.borderLeft = "3px solid " + borderColor
 
-  var missingEntries = Object.entries(missingUnits)
+  var missingEntries = Object.keys(missingUnits).map(function(k) { return [k, missingUnits[k]] })
   var total = missingEntries.length
   var PREVIEW = 5
   var groupKey = planets.join('|')
@@ -502,54 +528,75 @@ function _renderPhaseGroupManual(div, phase, planets) {
 
 // =====================================================
 // GERAR LISTA DE FARM PARA CLIPBOARD
+// Gera diretamente dos déficits de platoon com 1 personagem por jogador
 // =====================================================
 function _copyFarmListToClipboard() {
-  if (typeof farmEngine === 'undefined') return
-
-  var assignments = farmEngine.loadAssignments()
-  var noProgressIds = {}
-  if (typeof rosterEngine !== 'undefined') {
-    var rosterMap = rosterEngine.loadActive()
-    var progress = farmEngine.checkProgress(rosterMap)
-    progress.noProgress.forEach(function(p) { noProgressIds[p.playerId] = p.daysSince })
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+  if (!rosterMap || Object.keys(rosterMap).length === 0) {
+    _showCopyToast('❌ Sincronize o roster primeiro.')
+    return
   }
 
   var now = new Date()
   var dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear()
+  var lines = ['Farm List ROTE — ' + dateStr, '']
 
-  var lines = ['📋 Farm List ROTE — ' + dateStr, '']
+  // Coletar déficits por prioridade via farmEngine se disponível
+  var deficits = []
+  if (typeof farmEngine !== 'undefined') {
+    var fullRoster = (typeof rosterEngine !== 'undefined') ? rosterEngine.load() : rosterMap
+    deficits = farmEngine.collectAllDeficits(rosterMap, fullRoster)
+  }
 
-  var groups = { 1: [], 2: [], 3: [] }
-  Object.keys(assignments).forEach(function(pid) {
-    var a = assignments[pid]
-    var g = a.priority || 3
-    if (!groups[g]) groups[g] = []
-    groups[g].push({ pid: pid, a: a })
+  if (deficits.length === 0) {
+    _showCopyToast('✅ Nenhum déficit de platoon encontrado.')
+    return
+  }
+
+  // 1 personagem por jogador — greedy por ordem de prioridade
+  var assignedPlayers = {}  // playerId → unitId já atribuído
+  var groupLines = { 1: [], 2: [], 3: [] }
+
+  deficits.forEach(function(deficit) {
+    var uname = (typeof getUnitName === 'function') ? getUnitName(deficit.unitId) : deficit.unitId
+    var relicStr = 'R' + deficit.targetRelic
+    var slotsToFill = deficit.deficit
+    var toRequest = slotsToFill + Math.ceil(slotsToFill / 3)
+    var assigned = 0
+    var playerLines = []
+
+    deficit.candidates.forEach(function(candidate) {
+      if (assigned >= toRequest) return
+      var pid = candidate.playerId
+      if (assignedPlayers[pid]) return  // já tem 1 personagem
+
+      assignedPlayers[pid] = deficit.unitId
+      assigned++
+
+      var relicNow = candidate.currentRelic < 0 ? 'sem o personagem' : 'R' + candidate.currentRelic
+      playerLines.push('  • ' + candidate.name + ' (' + relicNow + ' → ' + relicStr + ')')
+    })
+
+    if (playerLines.length > 0) {
+      var priority = deficit.priority || 1
+      if (!groupLines[priority]) groupLines[priority] = []
+      groupLines[priority].push(
+        uname + ' ' + relicStr + ' — ' + deficit.planet + ' [' + playerLines.length + ' jogadores]'
+      )
+      playerLines.forEach(function(l) { groupLines[priority].push(l) })
+    }
   })
 
   var groupLabels = {
-    1: '🔴 CRÍTICO — Planetas ativos',
-    2: '🟡 PRÓXIMO — Mesmo tier',
+    1: '🔴 CRÍTICO — Planetas ativos com déficit',
+    2: '🟡 PRÓXIMO — Mesmo tier, não jogado ainda',
     3: '🔵 CRESCIMENTO — Próximo tier'
   }
 
   [1, 2, 3].forEach(function(g) {
-    if (!groups[g] || groups[g].length === 0) return
+    if (!groupLines[g] || groupLines[g].length === 0) return
     lines.push(groupLabels[g])
-
-    // Ordenar por nome
-    groups[g].sort(function(a, b) {
-      return (a.a.playerName || '').localeCompare(b.a.playerName || '')
-    })
-
-    groups[g].forEach(function(entry) {
-      var a = entry.a
-      var uname = (typeof getUnitName === 'function') ? getUnitName(a.unitId) : a.unitId
-      var stuck = noProgressIds[entry.pid] !== undefined
-        ? ' ⚠ sem progresso (' + noProgressIds[entry.pid] + 'd)' : ''
-      lines.push('• ' + (a.playerName || entry.pid) + ' → ' + uname + ' R' + a.targetRelic + stuck)
-    })
-
+    groupLines[g].forEach(function(l) { lines.push(l) })
     lines.push('')
   })
 
@@ -557,7 +604,7 @@ function _copyFarmListToClipboard() {
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() {
-      _showCopyToast('✅ Lista copiada para a área de transferência!')
+      _showCopyToast('✅ Lista copiada! (' + Object.keys(assignedPlayers).length + ' jogadores)')
     }).catch(function() {
       _fallbackCopy(text)
     })

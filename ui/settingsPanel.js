@@ -167,7 +167,6 @@ function _saveAndApplyActivity(actStatus) {
   if (typeof calculate === 'function') calculate()
   if (typeof drawPlatoonList === 'function') drawPlatoonList()
   if (typeof drawFarmCritical === 'function') drawFarmCritical()
-  if (typeof drawFarmList === 'function') drawFarmList()
 
   // Re-renderizar apenas a lista de atividade
   var listContainer = document.getElementById('activityListContainer')
@@ -305,10 +304,9 @@ function syncGuild() {
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
           setTimeout(function() {
             renderSettingsPanel()
-            // Atualizar coluna de platoons e farm list com dados reais
+            // Atualizar coluna de platoons com dados reais
             if (typeof drawPlatoonList === 'function') drawPlatoonList()
             if (typeof drawFarmCritical === 'function') drawFarmCritical()
-            if (typeof drawFarmList === 'function') drawFarmList()
           }, 1500)
         }
       )

@@ -237,7 +237,7 @@ applyGPProjection()
 })
 
 document.getElementById("specialMissionToggle")
-.addEventListener("change", function(){
+.addEventListener("input", function(){
 
 let name = state.selectedPlanet
 if(!name) return
@@ -249,11 +249,22 @@ return planetData[p].unlock === "specialMission"
 
 if(!specialTarget) return
 
-if(!state.specialMission){
-state.specialMission = {}
-}
+if(!state.specialMission) state.specialMission = {}
 
-state.specialMission[name] = this.checked
+var victories = parseInt(this.value) || 0
+state.specialMission[name] = victories
+
+// Atualizar status visual
+var statusEl = document.getElementById("specialMissionStatus")
+if (statusEl) {
+  if (victories >= 30) {
+    statusEl.textContent = "✅ " + specialTarget + " desbloqueado"
+    statusEl.style.color = "#4ade80"
+  } else {
+    statusEl.textContent = (30 - victories) + " para desbloquear " + specialTarget
+    statusEl.style.color = "#f59e0b"
+  }
+}
 
 calculate()
 

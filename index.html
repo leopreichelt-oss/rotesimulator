@@ -101,9 +101,10 @@ Briefing para oficiais
         </label>
         </div>
 
-        <label id="specialMissionBox" style="display:none">
-          Missão especial
-          <input type="checkbox" id="specialMissionToggle">
+        <label id="specialMissionBox" style="display:none;align-items:center;gap:6px;">
+          🔓 Vitórias missão especial:
+          <input type="number" id="specialMissionToggle" min="0" max="200" style="width:60px;">
+          <span id="specialMissionStatus" style="font-size:10px;color:#94a3b8;"></span>
         </label>
 
         <button onclick="savePlanet()">Salvar</button>
@@ -116,8 +117,6 @@ Briefing para oficiais
   <div id="farmCritical"></div>
   <h3>Platoons</h3>
   <div id="platoonList"></div>
-  <h3 style="margin-top:16px;">Farm List</h3>
-  <div id="farmList"></div>
 </div>
 
 </div>

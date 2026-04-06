@@ -35,7 +35,6 @@ drawPlanetList()
 drawPhaseList()
 if (typeof drawPlatoonList === 'function') drawPlatoonList()
 if (typeof drawFarmCritical === 'function') drawFarmCritical()
-if (typeof drawFarmList === 'function') drawFarmList()
 updateStarCounter()
 
 drawROTEHistory()
