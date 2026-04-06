@@ -109,7 +109,8 @@ var farmEngine = {
       })
     })
 
-    var roster = fullRosterMap || activeRosterMap
+    // Candidatos de farm = apenas jogadores ativos (nunca inativos/margem)
+    var roster = activeRosterMap
     var results = []
 
     Object.keys(unitSlots).forEach(function(unitId) {
@@ -172,13 +173,24 @@ var farmEngine = {
     var maxTier = farmEngine.getMaxActiveTier()
     var allPlanetNames = Object.keys(typeof planetData !== 'undefined' ? planetData : {})
 
+    // Verifica se um planeta bonus (unlock=specialMission) está desbloqueado
+    function isBonusPlanetUnlocked(name) {
+      var pd = typeof planetData !== 'undefined' ? planetData[name] : null
+      if (!pd || pd.unlock !== 'specialMission') return true  // não é bonus, sem restrição
+      var missionPlanet = pd.missionPlanet
+      var sm = state.specialMission ? state.specialMission[missionPlanet] : null
+      return sm === true || Number(sm) >= 30
+    }
+
     var notPlayedSameTier = allPlanetNames.filter(function(name) {
       if (state.planets[name] && state.planets[name].phase) return false
+      if (!isBonusPlanetUnlocked(name)) return false  // bonus bloqueado
       return getPlanetTier(name) === maxTier
     })
 
     var notPlayedNextTier = allPlanetNames.filter(function(name) {
       if (state.planets[name] && state.planets[name].phase) return false
+      if (!isBonusPlanetUnlocked(name)) return false  // bonus bloqueado
       return getPlanetTier(name) === maxTier + 1
     })
 
