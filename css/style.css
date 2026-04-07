@@ -443,3 +443,31 @@ color:white;
 #simHeaderFields label.inactive-field {
   display: none;
 }
+
+/* ── Battle Map Modal ─────────────────────────────────────────────── */
+.bm-player-row {
+  border: 1px solid #334155;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.bm-player-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  background: #1e293b;
+  flex-wrap: wrap;
+}
+
+.bm-player-header:hover {
+  background: #273548;
+}
+
+.bm-player-detail {
+  background: #0f172a;
+  padding: 4px 10px;
+  border-top: 1px solid #334155;
+}

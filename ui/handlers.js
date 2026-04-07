@@ -123,9 +123,11 @@ function updatePlanetBattleInfo(name) {
 
   if (!infoEl) return
 
-  // Link do mapa
+  // Link do mapa de batalhas
   if (mapLink && typeof PLANET_MAP_URL !== 'undefined' && PLANET_MAP_URL[name]) {
-    mapLink.href = PLANET_MAP_URL[name]
+    mapLink.href = '#'
+    mapLink.onclick = function(e) { e.preventDefault(); openBattleMap(name) }
+    mapLink.textContent = '🗺 Ver mapa de batalhas'
     mapLink.style.display = 'block'
   } else if (mapLink) {
     mapLink.style.display = 'none'

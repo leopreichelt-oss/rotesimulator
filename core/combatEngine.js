@@ -268,21 +268,41 @@ var combatEngine = {
       : (unit.relic_tier - 2) >= minRelic
   },
 
-  // Verifica se um jogador é elegível para uma missão
-  _playerEligible: function(player, missionReq, minRelic) {
+  // Verifica se um jogador é elegível para uma missão.
+  // Prioriza MISSION_SQUADS (composições reais de squads) antes do keyUnit genérico.
+  _playerEligible: function(player, missionReq, minRelic, planetName) {
+    var ce = combatEngine
+
+    // ── MISSION_SQUADS: dados reais de elegibilidade por composição ──────
+    if (typeof MISSION_SQUADS !== 'undefined' && planetName) {
+      var planetSquads = MISSION_SQUADS[planetName]
+      if (planetSquads) {
+        var squads = planetSquads[missionReq.n]
+        if (squads !== undefined) {
+          // [] ou null = confirmado sem composições elegíveis
+          if (!squads || squads.length === 0) return false
+          return squads.some(function(squad) {
+            var squadIsShip = !!squad.isShip
+            return squad.require.every(function(uid) {
+              return ce._playerHasUnit(player, uid, minRelic, squadIsShip)
+            })
+          })
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Fallback: lógica keyUnit original
     if (!missionReq || !missionReq.keyUnit) return true  // null = qualquer
 
-    var ce = combatEngine
     var units = missionReq.keyUnit
     var isShip = !!missionReq.isShip
 
     if (missionReq.requireAll) {
-      // Jogador precisa de TODOS os personagens listados
       return units.every(function(uid) {
         return ce._playerHasUnit(player, uid, minRelic, isShip)
       })
     } else {
-      // Jogador precisa de PELO MENOS 1
       return units.some(function(uid) {
         return ce._playerHasUnit(player, uid, minRelic, isShip)
       })
@@ -351,9 +371,12 @@ var combatEngine = {
       var req = missionReqs.find(function(r) { return r.n === mission.n })
       if (!req) return
 
+      // Missões especiais de desbloqueio são tratadas por computeSpecialMissionEligible
+      if (req.isSpecialUnlock) return
+
       // Conta quantos jogadores são elegíveis para essa missão
       var eligiblePlayers = players.filter(function(player) {
-        return combatEngine._playerEligible(player, req, minRelic)
+        return combatEngine._playerEligible(player, req, minRelic, planetName)
       }).length
 
       if (eligiblePlayers === 0) return
@@ -396,6 +419,88 @@ var combatEngine = {
       var d = localStorage.getItem(combatEngine.STORAGE_KEY)
       return d ? JSON.parse(d) : {}
     } catch(e) { return {} }
+  },
+
+  // Retorna, por jogador ativo, quais missões ele consegue fazer no planeta
+  // e quais squads (até 3) ele pode usar em cada missão.
+  // Retorna: [{ playerId, playerName, missions:[{n, type, squads:[[uid,...],...]}, ...] }]
+  // Ordenado por: mais missões primeiro.
+  computePlayerMissionsForPlanet: function(planetName, rosterMap) {
+    if (!rosterMap) return []
+    var ce = combatEngine
+    var combatData = (typeof PLANET_COMBAT_DATA !== 'undefined') ? PLANET_COMBAT_DATA[planetName] : null
+    var missionReqs = COMBAT_MISSION_REQS[planetName]
+    if (!combatData || !missionReqs) return []
+
+    var tier = (typeof getPlanetTier === 'function') ? getPlanetTier(planetName) : 1
+    var minRelic = (typeof TIER_RELIC !== 'undefined') ? (TIER_RELIC[tier] || 5) : 5
+
+    var planetSquads = (typeof MISSION_SQUADS !== 'undefined') ? (MISSION_SQUADS[planetName] || {}) : {}
+
+    var results = []
+
+    Object.values(rosterMap).forEach(function(player) {
+      var playerMissions = []
+
+      combatData.missions.forEach(function(mission) {
+        var req = missionReqs.find(function(r) { return r.n === mission.n })
+        if (!req || req.isSpecialUnlock) return
+
+        var eligibleSquads = []
+
+        var squadsForMission = planetSquads[mission.n]
+        if (squadsForMission !== undefined) {
+          // Usar MISSION_SQUADS
+          if (squadsForMission && squadsForMission.length > 0) {
+            squadsForMission.forEach(function(squad) {
+              var squadIsShip = !!squad.isShip
+              var hasAll = squad.require.every(function(uid) {
+                return ce._playerHasUnit(player, uid, minRelic, squadIsShip)
+              })
+              if (hasAll) eligibleSquads.push(squad.require)
+            })
+          }
+        } else {
+          // Fallback keyUnit
+          if (!req.keyUnit) {
+            // Any: "jogador elegível" mas sem squads específicos
+            eligibleSquads.push(['any'])
+          } else {
+            var isShip = !!req.isShip
+            var eligible = false
+            if (req.requireAll) {
+              eligible = req.keyUnit.every(function(uid) { return ce._playerHasUnit(player, uid, minRelic, isShip) })
+              if (eligible) eligibleSquads.push(req.keyUnit)
+            } else {
+              req.keyUnit.forEach(function(uid) {
+                if (ce._playerHasUnit(player, uid, minRelic, isShip)) eligibleSquads.push([uid])
+              })
+            }
+          }
+        }
+
+        if (eligibleSquads.length > 0) {
+          playerMissions.push({
+            n:      mission.n,
+            type:   mission.type,
+            req:    mission.req,
+            squads: eligibleSquads.slice(0, 3) // max 3 opções
+          })
+        }
+      })
+
+      if (playerMissions.length > 0) {
+        results.push({
+          playerId:    player.playerId || player.id || '',
+          playerName:  player.name || player.playerName || player.playerId || '?',
+          missions:    playerMissions
+        })
+      }
+    })
+
+    // Ordenar por número de missões elegíveis (mais → menos)
+    results.sort(function(a, b) { return b.missions.length - a.missions.length })
+    return results
   }
 
 }
