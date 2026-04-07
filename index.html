@@ -109,11 +109,10 @@ Briefing para oficiais
         </label>
         </div>
 
-        <label id="specialMissionBox" style="display:none;align-items:center;gap:6px;">
-          🔓 Vitórias missão especial:
-          <input type="number" id="specialMissionToggle" min="0" max="200" style="width:60px;">
-          <span id="specialMissionStatus" style="font-size:10px;color:#94a3b8;"></span>
-        </label>
+        <div id="specialMissionBox" style="display:none;flex-direction:column;gap:4px;padding:6px 0;">
+          <div style="font-size:11px;color:#94a3b8;font-weight:bold;">🔓 Missão especial de desbloqueio</div>
+          <div id="specialMissionStatus" style="font-size:11px;line-height:1.4;"></div>
+        </div>
 
         <button onclick="savePlanet()">Salvar</button>
       </div>

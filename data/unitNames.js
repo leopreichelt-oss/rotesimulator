@@ -226,6 +226,7 @@ var UNIT_NAMES = {
   "OLDBENKENOBI":                        "Obi-Wan Velho", 
   "OUTRIDER":                            "Outrider", 
   "PADMEAMIDALA":                        "Padme Amidala", 
+  "IG12":                                "IG-12",
   "PAO":                                 "Pao",
   "PAPLOO":                              "Paploo",
   "PAZVIZSLA":                           "Paz Vizsla",

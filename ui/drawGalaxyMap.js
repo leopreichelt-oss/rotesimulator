@@ -45,34 +45,44 @@ node.appendChild(starBox)
 node.onclick = function(e){
   e.stopPropagation()
 
-  let toggleBox = document.getElementById("specialMissionBox")
-  let toggle = document.getElementById("specialMissionToggle")
+  // Missão especial de desbloqueio: exibição automática baseada no roster
+  var specialBox = document.getElementById("specialMissionBox")
+  if (specialBox) specialBox.style.display = "none"
 
-  toggleBox.style.display = "none"
-  toggle.value = ""
-
-  let specialTarget = Object.keys(planetData).find(p => {
-    return planetData[p].unlock === "specialMission"
-      && planetData[p].missionPlanet === name
-  })
-
-  if(specialTarget){
-    toggleBox.style.display = "flex"
-    var sm = state.specialMission?.[name]
-    // Compatibilidade: bool legado → trata true como 30
-    toggle.value = sm === true ? 30 : (Number(sm) || 0)
+  var hasSpecialUnlock = (name === 'Bracca' || name === 'Tatooine')
+  if (hasSpecialUnlock && specialBox) {
+    var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+    var specialResult = (typeof combatEngine !== 'undefined' && rosterMap)
+      ? combatEngine.computeSpecialMissionEligible(name, rosterMap)
+      : null
 
     var statusEl = document.getElementById("specialMissionStatus")
-    if (statusEl) {
-      var victories = parseInt(toggle.value) || 0
-      if (victories >= 30) {
-        statusEl.textContent = "✅ " + specialTarget + " desbloqueado"
-        statusEl.style.color = "#4ade80"
-      } else if (victories > 0) {
-        statusEl.textContent = (30 - victories) + " para desbloquear " + specialTarget
-        statusEl.style.color = "#f59e0b"
-      } else {
-        statusEl.textContent = ""
+    specialBox.style.display = "flex"
+
+    if (specialResult) {
+      var won = specialResult.eligible
+      var need = specialResult.winsRequired
+      var unlockName = specialResult.unlocks
+
+      if (statusEl) {
+        if (won >= need) {
+          statusEl.innerHTML = '✅ <strong>' + unlockName + ' desbloqueado</strong> (' + won + ' jogadores elegíveis)'
+          statusEl.style.color = "#4ade80"
+        } else {
+          statusEl.innerHTML =
+            won + ' de ' + need + ' jogadores elegíveis' +
+            ' — faltam <strong>' + (need - won) + '</strong> para desbloquear ' + unlockName
+          statusEl.style.color = won > 0 ? "#f59e0b" : "#f87171"
+        }
+      }
+    } else {
+      // Sem roster sincronizado: informar o requisito
+      if (statusEl) {
+        var reqText = name === 'Bracca'
+          ? 'Cal R8+Cere R7 ou JKCK R7+Cere R7 — 30 jogadores para Zeffo'
+          : 'Mand\'alor R7+Beskar R7+(IG-12 R7 ou Paz R7) — 30 para Mandalore'
+        statusEl.innerHTML = '⚠ Sincronize o roster &nbsp;<span style="color:#475569;">' + reqText + '</span>'
+        statusEl.style.color = "#94a3b8"
       }
     }
   }

@@ -236,39 +236,8 @@ saveState()
 applyGPProjection()
 })
 
-document.getElementById("specialMissionToggle")
-.addEventListener("input", function(){
-
-let name = state.selectedPlanet
-if(!name) return
-
-let specialTarget = Object.keys(planetData).find(p => {
-return planetData[p].unlock === "specialMission"
-&& planetData[p].missionPlanet === name
-})
-
-if(!specialTarget) return
-
-if(!state.specialMission) state.specialMission = {}
-
-var victories = parseInt(this.value) || 0
-state.specialMission[name] = victories
-
-// Atualizar status visual
-var statusEl = document.getElementById("specialMissionStatus")
-if (statusEl) {
-  if (victories >= 30) {
-    statusEl.textContent = "✅ " + specialTarget + " desbloqueado"
-    statusEl.style.color = "#4ade80"
-  } else {
-    statusEl.textContent = (30 - victories) + " para desbloquear " + specialTarget
-    statusEl.style.color = "#f59e0b"
-  }
-}
-
-calculate()
-
-})
+// specialMissionToggle removido — missão especial agora é calculada automaticamente
+// pelo combatEngine.computeSpecialMissionEligible() com base no roster sincronizado
 
 document.querySelectorAll("[id^=realPhase]")
 .forEach(input => {

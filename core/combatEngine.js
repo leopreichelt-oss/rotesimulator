@@ -84,8 +84,9 @@ var COMBAT_MISSION_REQS = {
     { n:3, keyUnit: null },
     // M4 nave LS
     { n:4, keyUnit: null, isShip: true },
-    // M5 especial Cal Kestis + Cere: ambos necessários
-    { n:5, keyUnit: ['CALKESTIS', 'CEREJUNDA'], requireAll: true }
+    // M5 especial: Cal Kestis R8 + Cere R7  OU  Cal Kestis (Cavaleiro Jedi) R7 + Cere R7
+    // Duas combinações válidas — checadas em computeSpecialMissionEligible
+    { n:5, keyUnit: null, isSpecialUnlock: true, unlocks: 'Zeffo', winsRequired: 30 }
   ],
 
   "Dathomir": [
@@ -110,8 +111,9 @@ var COMBAT_MISSION_REQS = {
     { n:4, keyUnit: ['FENNECSHAND'] },
     // M5 especial GI (Grande Inquisidor + Inquisitorius)
     { n:5, keyUnit: ['GRANDINQUISITOR'] },
-    // M6 especial Bo'katan (desbloqueia Mandalore)
-    { n:6, keyUnit: ['BOKATAN'] }
+    // M6 especial Bo-Katan Mand'alor + Beskar + (IG-12 R7 OU Paz Vizsla R7)
+    // Combinações checadas em computeSpecialMissionEligible
+    { n:6, keyUnit: null, isSpecialUnlock: true, unlocks: 'Mandalore', winsRequired: 30 }
   ],
 
   "Kashyyyk": [
@@ -284,6 +286,53 @@ var combatEngine = {
       return units.some(function(uid) {
         return ce._playerHasUnit(player, uid, minRelic, isShip)
       })
+    }
+  },
+
+  // Retorna quantos jogadores ativos são elegíveis para a missão especial de desbloqueio
+  // de um dado planeta (Bracca → Zeffo, Tatooine → Mandalore).
+  // Também retorna o nome do planeta desbloqueado e o limiar de vitórias.
+  computeSpecialMissionEligible: function(planetName, rosterMap) {
+    if (!rosterMap) return null
+    var ce = combatEngine
+
+    var players = Object.values(rosterMap)
+    var eligible = 0
+    var unlocks = null
+    var winsRequired = 30
+
+    if (planetName === 'Bracca') {
+      unlocks = 'Zeffo'
+      // Opção A: Cal Kestis R8 + Cere Junda R7
+      // Opção B: Cal Kestis (Cavaleiro Jedi) R7 + Cere Junda R7
+      eligible = players.filter(function(p) {
+        var cere = ce._playerHasUnit(p, 'CEREJUNDA', 7, false)
+        if (!cere) return false
+        var calR8  = ce._playerHasUnit(p, 'CALKESTIS',    8, false)
+        var jkckR7 = ce._playerHasUnit(p, 'JEDIKNIGHTCAL', 7, false)
+        return calR8 || jkckR7
+      }).length
+    }
+
+    if (planetName === 'Tatooine') {
+      unlocks = 'Mandalore'
+      // Requer: Bo-Katan Mand'alor R7 + Mandaloriano Beskar R7 + (IG-12 R7 OU Paz Vizsla R7)
+      eligible = players.filter(function(p) {
+        var bkm    = ce._playerHasUnit(p, 'BOKATANMANDALORE',   7, false)
+        var beskar = ce._playerHasUnit(p, 'MANDALORIANBESKAR',  7, false)
+        if (!bkm || !beskar) return false
+        var ig12   = ce._playerHasUnit(p, 'IG12',               7, false)
+        var paz    = ce._playerHasUnit(p, 'PAZVIZSLA',          7, false)
+        return ig12 || paz
+      }).length
+    }
+
+    if (unlocks === null) return null
+
+    return {
+      eligible:      eligible,
+      unlocks:       unlocks,
+      winsRequired:  winsRequired
     }
   },
 
