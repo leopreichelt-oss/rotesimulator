@@ -73,6 +73,38 @@ function toggleSettingsPanel() {
   if (!isOpen) renderSettingsPanel()
 }
 
+// Calcula o crescimento médio diário de GP por jogador com base no histórico de eventos.
+// Retorna { growthPerPlayer, eventsUsed, note } ou null se histórico insuficiente.
+function computeHistoryGrowth() {
+  if (typeof getROTEHistory !== 'function') return null
+  var history = getROTEHistory()
+  // Usar apenas eventos fechados (F6 preenchida) com guildGP e startTime
+  var closed = history.filter(function(e) { return e.closedAt && e.guildGP && e.startTime })
+  if (closed.length < 2) return null
+
+  // Ordenar do mais antigo ao mais recente
+  closed.sort(function(a, b) { return new Date(a.startTime) - new Date(b.startTime) })
+
+  var oldest = closed[0]
+  var newest = closed[closed.length - 1]
+  var daysDiff = (new Date(newest.startTime) - new Date(oldest.startTime)) / (1000 * 60 * 60 * 24)
+  if (daysDiff < 7) return null  // menos de 1 semana: não confiável
+
+  var gpDiff = newest.guildGP - oldest.guildGP
+  if (gpDiff <= 0) return null
+
+  // Usar o nº de jogadores do evento mais recente como referência
+  var players = newest.players || 1
+  var growthPerPlayer = Math.round(gpDiff / daysDiff / players)
+
+  return {
+    growthPerPlayer: growthPerPlayer,
+    eventsUsed: closed.length,
+    daysCovered: Math.round(daysDiff),
+    note: closed.length + ' evento(s), ' + Math.round(daysDiff) + ' dias'
+  }
+}
+
 // Renderiza o conteúdo do painel
 function renderSettingsPanel() {
   var content = document.getElementById('settingsPanelContent')
@@ -86,7 +118,22 @@ function renderSettingsPanel() {
   var rosterData = rosterEngine.load()
   var memberCount = rosterData ? Object.keys(rosterData).length : 0
 
+  // Crescimento diário: auto se histórico disponível, senão padrão 5500
+  var histGrowth = computeHistoryGrowth()
+  var currentGrowth = document.getElementById('dailyGrowth') ? Number(document.getElementById('dailyGrowth').value) : 5500
+  var growthNote = histGrowth
+    ? '<div style="font-size:10px;color:#4ade80;margin-top:2px;">📈 Calculado do histórico (' + histGrowth.note + ')</div>'
+    : '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">Histórico insuficiente — usando padrão manual</div>'
+
+  // Margem de segurança: valor atual
+  var currentSafe = document.getElementById('safe') ? document.getElementById('safe').value : 3
+
+  // Nº de jogadores na margem identificados automaticamente
+  var actStatus = settingsState.activityStatus
+  var identMargin = actStatus ? actStatus.safeMargin : 0
+
   content.innerHTML =
+    // ── Sincronização ──────────────────────────────────────────────────
     '<div style="margin-bottom:12px;">' +
       '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px;">Allycode (qualquer membro da guilda)</label>' +
       '<input id="settingsAllycode" type="text" value="' + settingsState.allycode + '"' +
@@ -109,16 +156,28 @@ function renderSettingsPanel() {
       lastSyncText + (memberCount ? ' (' + memberCount + ' jogadores)' : '') +
     '</div>' +
 
+    // ── Configurações ──────────────────────────────────────────────────
     '<div style="margin-top:12px;border-top:1px solid #334155;padding-top:10px;">' +
-      '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px;">Margem de segurança</label>' +
-      '<input id="settingsSafe" type="number" value="' + (document.getElementById('safe') ? document.getElementById('safe').value : 3) + '"' +
-        ' style="width:100%;box-sizing:border-box;margin-bottom:8px;">' +
-      '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px;">Inativos</label>' +
-      '<input id="settingsInactive" type="number" value="' + (document.getElementById('inactive') ? document.getElementById('inactive').value : 0) + '"' +
-        ' style="width:100%;box-sizing:border-box;margin-bottom:8px;">' +
-      '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px;">Crescimento diário/jogador</label>' +
-      '<input id="settingsDailyGrowth" type="number" value="' + (document.getElementById('dailyGrowth') ? document.getElementById('dailyGrowth').value : 5500) + '"' +
-        ' style="width:100%;box-sizing:border-box;margin-bottom:8px;">' +
+
+      // Margem de segurança com explicação
+      '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:2px;">' +
+        'Margem de segurança' +
+        '<span style="font-size:10px;color:#475569;font-weight:normal;"> (jogadores incertos além dos identificados)</span>' +
+      '</label>' +
+      '<div style="font-size:10px;color:#64748b;margin-bottom:4px;line-height:1.4;">' +
+        'A sincronização identifica automaticamente os jogadores inativos e na margem.<br>' +
+        'Este campo adiciona uma margem genérica extra para jogadores não identificados.<br>' +
+        '<span style="color:#f59e0b;">GP mín = GP máx − GP(inativos) − GP(margem auto: ' + identMargin + ') − GP médio × este valor</span>' +
+      '</div>' +
+      '<input id="settingsSafe" type="number" value="' + currentSafe + '"' +
+        ' style="width:100%;box-sizing:border-box;margin-bottom:12px;">' +
+
+      // Crescimento diário
+      '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:2px;">Crescimento diário/jogador</label>' +
+      growthNote +
+      '<input id="settingsDailyGrowth" type="number" value="' + (histGrowth ? histGrowth.growthPerPlayer : currentGrowth) + '"' +
+        ' style="width:100%;box-sizing:border-box;margin-top:4px;margin-bottom:12px;">' +
+
       '<button onclick="saveSettings()"' +
         ' style="width:100%;padding:6px;background:#334155;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">' +
         '💾 Salvar configurações' +
@@ -341,17 +400,12 @@ function setSyncProgress(text, pct) {
 
 // Salva configurações manuais
 function saveSettings() {
-  var safe = document.getElementById('settingsSafe')
-  var inactive = document.getElementById('settingsInactive')
+  var safe  = document.getElementById('settingsSafe')
   var daily = document.getElementById('settingsDailyGrowth')
 
   if (safe && document.getElementById('safe')) {
     document.getElementById('safe').value = safe.value
     document.getElementById('safe').dispatchEvent(new Event('input'))
-  }
-  if (inactive && document.getElementById('inactive')) {
-    document.getElementById('inactive').value = inactive.value
-    document.getElementById('inactive').dispatchEvent(new Event('input'))
   }
   if (daily && document.getElementById('dailyGrowth')) {
     document.getElementById('dailyGrowth').value = daily.value

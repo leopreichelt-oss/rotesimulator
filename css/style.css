@@ -2,7 +2,11 @@ body{
 margin:0;
 font-family:Arial;
 background:#0f172a;
-color:white
+color:white;
+display:flex;
+flex-direction:column;
+height:100vh;
+overflow:hidden;
 }
 
 header{
@@ -11,28 +15,38 @@ padding:10px;
 display:flex;
 gap:20px;
 flex-wrap:wrap;
-align-items:center
+align-items:center;
+flex-shrink:0;
+position:sticky;
+top:0;
+z-index:100;
 }
 
 .container{
 display:grid;
 grid-template-columns:260px minmax(0,1fr) 260px;
-align-items:start;
+flex:1;
+min-height:0;
 }
 
 .left{
 background:#1e293b;
 padding:10px;
-overflow:auto;
-border-right:2px solid #334155
+overflow-y:auto;
+border-right:2px solid #334155;
+height:100%;
+box-sizing:border-box;
 }
 
 .map{
 padding:10px;
 display:flex;
 justify-content:center;
-align-items:center;
+align-items:flex-start;
 min-width:0;
+overflow-y:auto;
+height:100%;
+box-sizing:border-box;
 }
 
 .phase{
@@ -71,6 +85,9 @@ background:#1e293b;
 padding:10px;
 border-left:2px solid #334155;
 min-width:240px;
+overflow-y:auto;
+height:100%;
+box-sizing:border-box;
 }
 
 input,select{
@@ -351,10 +368,6 @@ color:white;
 }
 
 .right{
-  background:#1e293b;
-  padding:10px;
-  border-left:2px solid #334155;
-  overflow:auto;
   font-size:12px;
 }
 
@@ -401,4 +414,32 @@ color:white;
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+/* Campos do modo simulação em grid de 2 colunas */
+#simHeaderFields {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 4px 12px;
+  align-items: center;
+}
+
+#simHeaderFields label {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+#simHeaderFields input {
+  width: 90px;
+  margin-bottom: 0;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+/* Campo inativos: oculto visualmente, mantido no DOM para cálculo */
+#simHeaderFields label.inactive-field {
+  display: none;
 }
