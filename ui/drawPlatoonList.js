@@ -758,8 +758,28 @@ function _showSquadFarmModal() {
       lines.push(r.player.name + ':')
       lines.push('  Squad: ' + r.squad.name + ' [' + evStr.join('+') + ']')
       lines.push('  Relic: ' + relicRange + '  |  ' + r.have + '/' + r.total + ' membros prontos')
+
+      // Jornada pendente: aviso + pré-requisitos faltando
+      if (r.journeyPending) {
+        var jp = r.journeyPending
+        var pct = Math.round(jp.pct * 100)
+        lines.push('  🗝 COMPLETAR JORNADA PRIMEIRO — ' + jp.journeyName
+          + ' (' + jp.met + '/' + jp.total + ' pré-req prontos, ' + pct + '%)')
+        if (jp.missing.length > 0) {
+          var missingNames = jp.missing.map(function(req) {
+            var name = (typeof getUnitName === 'function') ? getUnitName(req.id) : req.id
+            var lvl  = req.isShip ? '7★'
+              : req.relic  !== undefined ? 'R' + req.relic
+              : req.gear   !== undefined ? 'G' + req.gear
+              : '?'
+            return name + ' (' + lvl + ')'
+          })
+          lines.push('  Falta: ' + missingNames.join(', '))
+        }
+      }
+
       if (r.membersNeeded.length > 0) {
-        lines.push('  Farmar: ' + r.membersNeeded.map(function(m) {
+        lines.push('  Farmar squad: ' + r.membersNeeded.map(function(m) {
           return m.name + ' (' + m.current + ' → ' + m.target + ')'
         }).join(', '))
       }

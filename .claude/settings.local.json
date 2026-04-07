@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \" import json, sys data = json.load\\(sys.stdin\\) units = data.get\\('rosterUnit', []\\) targets = ['jabba','fennec','saw','hera','kestis','thirdsister','reva','sister'] for u in units: bid = u.get\\('definitionId',''\\).split\\(':'\\)[0].lower\\(\\) for t in targets: if t in bid: print\\(u.get\\('definitionId',''\\)\\) break \")",
+      "Bash(curl -s -X POST https://worker-lively-heart-f0a0.leopreichelt.workers.dev/player -H 'Content-Type: application/json' -d '{\"payload\":{\"allyCode\":\"447623167\"}}' -o /tmp/roster.json)",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//tmp/**)",
+      "Bash(python3 -c ':*)",
+      "Bash(node -e ':*)",
+      "Bash(where node:*)",
+      "Bash(where python:*)",
+      "Bash(where python3:*)",
+      "WebFetch(domain:swgoh.gg)",
+      "Bash(sed -n '456,470p' \"c:\\\\Users\\\\Bancada02\\\\Documents\\\\simulador rote\\\\rotesimulator\\\\data\\\\platoonRequirements.js\")",
+      "Bash(sed -n '562,580p' \"c:\\\\Users\\\\Bancada02\\\\Documents\\\\simulador rote\\\\rotesimulator\\\\data\\\\platoonRequirements.js\")"
+    ]
+  }
+}

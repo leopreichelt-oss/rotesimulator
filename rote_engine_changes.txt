@@ -433,3 +433,4 @@ BUGS / COMPORTAMENTOS A VERIFICAR (pendentes desde sessões anteriores)
 ================================================================================
   - applyGPGrowth: crescimento de GP fase a fase durante o evento
   - Early battles/platoons: regras 4.a até 4.e do documento original
+— Relíquia 7

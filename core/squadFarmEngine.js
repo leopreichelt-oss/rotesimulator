@@ -8,8 +8,13 @@
  *        - Cobertura: % de membros que JÁ TEM (reduz custo de farm)
  *        - Multi-evento: squads que cobrem ROTE+GAC+TW têm peso extra
  *        - Liga: squads acima do leagueMin do squad são filtrados para jogadores fracos
- *     2. Ordena por "mais próximo de completar" → recomenda o top squad por jogador
- *     3. Mostra min_relic → ideal_relic (sem retrabalho)
+ *     2. Filtro de jornada:
+ *        a) Jornada concluída (tem a unidade no grau mínimo) → score normal
+ *        b) Jornada ≥ 80% pronta → score com multiplicador 0.7 + flag journeyPending
+ *        c) Jornada < 80% pronta → descartado (custo muito alto)
+ *        d) Sem jornada (null) → score normal
+ *     3. Recomenda o squad de maior score por jogador
+ *     4. Mostra min_relic → ideal_relic (sem retrabalho)
  *
  * Repetição: múltiplos jogadores podem receber o mesmo squad.
  * Cada jogador recebe 1 recomendação por vez.
@@ -37,10 +42,69 @@ var squadFarmEngine = {
       : Math.max(0, (unit.relic_tier || 0) - 2)
   },
 
+  // Verifica se o jogador atende a um único pré-requisito de jornada
+  _playerMeetsReq: function(player, req) {
+    if (!player.units) return false
+    var unit = player.units.find(function(u) { return u.base_id === req.id })
+    if (!unit) return false
+
+    if (req.isShip) {
+      return (unit.rarity || 0) >= (req.stars || 7)
+    }
+    if (req.relic !== undefined) {
+      var relicLevel = (typeof rosterEngine !== 'undefined')
+        ? rosterEngine.toRelicLevel(unit.relic_tier)
+        : Math.max(0, (unit.relic_tier || 0) - 2)
+      return relicLevel >= req.relic
+    }
+    if (req.gear !== undefined) {
+      // Gear 12: relic_tier >= 3 = R1+ (passou do Gear 12), ou level >= 85
+      var relicTier = unit.relic_tier || 0
+      if (relicTier >= 3) return true          // R1+ → certamente G12+
+      if ((unit.level || 0) >= 85) return true  // nível max → provavelmente G12+
+      return false
+    }
+    return true
+  },
+
+  // Calcula o percentual de prontidão da jornada de um personagem para um jogador
+  // Retorna null se JOURNEY_REQS não tiver dados para esse unit
+  // Retorna { pct, met, total, missing[], grade, journeyName }
+  _journeyReadiness: function(player, unitId) {
+    if (typeof JOURNEY_REQS === 'undefined') return null
+    var jd = JOURNEY_REQS[unitId]
+    if (!jd) return null
+
+    // Usa o grau mais alto disponível (grau 5 = mais exigente)
+    var grades = Object.keys(jd.grades).map(Number).sort(function(a, b) { return b - a })
+    if (grades.length === 0) return null
+    var grade = grades[0]
+    var reqs = jd.grades[grade]
+    if (!reqs || reqs.length === 0) return null
+
+    var met = 0
+    var missing = []
+    reqs.forEach(function(req) {
+      if (squadFarmEngine._playerMeetsReq(player, req)) {
+        met++
+      } else {
+        missing.push(req)
+      }
+    })
+
+    return {
+      pct:         met / reqs.length,
+      met:         met,
+      total:       reqs.length,
+      missing:     missing,
+      grade:       grade,
+      journeyName: jd.name
+    }
+  },
+
   // Para um squad e um jogador: quantos membros já atendem minRelic
   _squadCoverage: function(squad, player) {
     if (squad.isFleet) {
-      // Naves: conta quem tem 7★
       var have = squad.members.filter(function(uid) {
         var unit = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
         return unit && unit.rarity >= 7
@@ -55,14 +119,36 @@ var squadFarmEngine = {
     return { have: have, total: squad.members.length }
   },
 
-  // Score de prioridade para um squad dado o jogador
-  // Maior score = mais recomendado
+  // Score de prioridade para um squad dado o jogador.
+  // Retorna { score, journeyPending } onde journeyPending = readiness obj | null
+  // score < 0 = descartado
   _scoreSquad: function(squad, player, leagueIdx) {
     var cov = squadFarmEngine._squadCoverage(squad, player)
 
     // Squad inacessível: liga do squad acima da liga do jogador (mas permitimos 1 nível acima)
     var squadLeagueIdx = squadFarmEngine.leagueIndex(squad.leagueMin)
-    if (squadLeagueIdx > leagueIdx + 1) return -1  // muito avançado
+    if (squadLeagueIdx > leagueIdx + 1) return { score: -1, journeyPending: null }
+
+    // ── Filtro de jornada ─────────────────────────────────────────────────
+    var journeyPending = null
+    if (squad.journeyUnit) {
+      var journeyUnitData = player.units
+        ? player.units.find(function(u) { return u.base_id === squad.journeyUnit })
+        : null
+      var minStars = squad.minJourneyStars || 7
+      var journeyComplete = journeyUnitData && (journeyUnitData.rarity || 0) >= minStars
+
+      if (!journeyComplete) {
+        var readiness = squadFarmEngine._journeyReadiness(player, squad.journeyUnit)
+        if (!readiness || readiness.pct < 0.8) {
+          // Jornada longe demais — custo muito alto, descarta
+          return { score: -1, journeyPending: null }
+        }
+        // Jornada ≥ 80%: incluir com penalidade (custo ainda existe)
+        journeyPending = readiness
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     // Fator de cobertura: 0.0 a 1.0 (quanto já tem)
     var coverage = cov.total > 0 ? cov.have / cov.total : 0
@@ -73,13 +159,17 @@ var squadFarmEngine = {
     // Fator de liga: squads de ligas mais altas têm peso para jogadores que já estão lá
     var leagueMatch = squadLeagueIdx <= leagueIdx ? 1.2 : 1.0
 
-    // Score final: cobertura (principal) + multi-evento + liga
-    // Cobertura alta = já tem boa base = menor custo de farm
-    return (coverage * 5) + (eventsCount * 0.5) + leagueMatch
+    // Score base: cobertura (principal) + multi-evento + liga
+    var baseScore = (coverage * 5) + (eventsCount * 0.5) + leagueMatch
+
+    // Penalidade se jornada ainda pendente (maior custo total)
+    var score = journeyPending ? baseScore * 0.7 : baseScore
+
+    return { score: score, journeyPending: journeyPending }
   },
 
   // Gera recomendações para todos os jogadores ativos
-  // Retorna: [{ player, squad, have, total, membersNeeded, minRelic, idealRelic, note }]
+  // Retorna: [{ player, squad, have, total, membersNeeded, journeyPending, leagueId, divisionId, skillRating }]
   recommend: function(rosterMap) {
     if (!rosterMap || typeof SQUAD_META === 'undefined') return []
 
@@ -91,42 +181,45 @@ var squadFarmEngine = {
 
       // Calcular score para cada squad
       var scored = SQUAD_META.map(function(squad) {
-        return { squad: squad, score: squadFarmEngine._scoreSquad(squad, player, leagueIdx) }
+        var res = squadFarmEngine._scoreSquad(squad, player, leagueIdx)
+        return { squad: squad, score: res.score, journeyPending: res.journeyPending }
       })
       .filter(function(s) { return s.score >= 0 })
       .sort(function(a, b) { return b.score - a.score })
 
       if (scored.length === 0) return
 
-      var best = scored[0].squad
-      var cov  = squadFarmEngine._squadCoverage(best, player)
+      var best          = scored[0].squad
+      var journeyPending = scored[0].journeyPending
+      var cov           = squadFarmEngine._squadCoverage(best, player)
 
-      // Membros que ainda precisam farmar
+      // Membros do squad que ainda precisam farmar
       var membersNeeded = []
       best.members.forEach(function(uid) {
-        var relic = squadFarmEngine._playerRelicFor(player, uid)
+        var relic    = squadFarmEngine._playerRelicFor(player, uid)
         var meetsMin = best.isFleet ? relic === 99 : relic >= best.minRelic
         if (!meetsMin) {
           var relicStr = relic < 0 ? 'sem o personagem'
             : best.isFleet ? (relic + '★') : 'R' + relic
           membersNeeded.push({
-            unitId: uid,
-            name: (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
+            unitId:  uid,
+            name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
             current: relicStr,
-            target: best.isFleet ? '7★' : 'R' + best.minRelic
+            target:  best.isFleet ? '7★' : 'R' + best.minRelic
           })
         }
       })
 
       results.push({
-        player:        player,
-        squad:         best,
-        have:          cov.have,
-        total:         cov.total,
-        membersNeeded: membersNeeded,
-        leagueId:      gac.leagueId,
-        divisionId:    gac.divisionId,
-        skillRating:   gac.skillRating
+        player:         player,
+        squad:          best,
+        have:           cov.have,
+        total:          cov.total,
+        membersNeeded:  membersNeeded,
+        journeyPending: journeyPending,  // null = jornada concluída/sem jornada
+        leagueId:       gac.leagueId,
+        divisionId:     gac.divisionId,
+        skillRating:    gac.skillRating
       })
     })
 
