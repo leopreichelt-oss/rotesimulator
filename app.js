@@ -3,6 +3,8 @@ window.onload = function(){
   drawGalaxyMap()
   loadState()
   if (typeof applySimMode === 'function') applySimMode()
+  // Restaurar lista de inativos/margem do localStorage (sem precisar resincronizar)
+  if (typeof _loadActivityStatusFromStorage === 'function') _loadActivityStatusFromStorage()
   calculate()
   drawROTEHistory()
   updateGPProjectionDisplay()

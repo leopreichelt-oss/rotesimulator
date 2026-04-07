@@ -41,7 +41,15 @@ PG ativo mínimo
 Briefing para oficiais
 </button>
 <button id="btnSimMode" onclick="toggleSimMode()" title="Modo simulação: editar dados manualmente">⚗ Simulação</button>
+<button id="btnSyncGuild" onclick="syncGuild()" title="Sincronizar Guilda e Roster" style="font-size:16px;padding:4px 10px;">🔄</button>
 <button onclick="toggleSettingsPanel()">⚙ Settings</button>
+
+<div id="syncProgress" style="display:none;position:fixed;bottom:16px;right:16px;width:260px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:10px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+  <div style="font-size:11px;color:#94a3b8;" id="syncProgressText">Iniciando...</div>
+  <div style="background:#334155;border-radius:4px;height:6px;margin-top:6px;">
+    <div id="syncProgressBar" style="background:#4da6ff;height:6px;border-radius:4px;width:0%;transition:width 0.3s;"></div>
+  </div>
+</div>
 
 <div id="settingsPanel" style="display:none;position:absolute;top:60px;right:10px;width:280px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:14px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">

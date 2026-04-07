@@ -12,6 +12,35 @@ var settingsState = {
   activityStatus: null  // { inactive: N, safeMargin: N, list: [...] }
 }
 
+// Reconstrói activityStatus a partir do localStorage (sem precisar resincronizar)
+function _loadActivityStatusFromStorage() {
+  var activityMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActivity() : {}
+  if (!activityMap || !Object.keys(activityMap).length) return
+
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.load() : {}
+
+  var list = Object.keys(activityMap).map(function(pid) {
+    var player = rosterMap ? rosterMap[pid] : null
+    return {
+      name:      player ? player.name : pid,
+      playerId:  pid,
+      daysAgo:   null,  // sem lastActivityTime no roster; "?" na UI
+      status:    activityMap[pid]
+    }
+  })
+
+  list.sort(function(a, b) {
+    var order = { inativo: 0, margem: 1, ativo: 2 }
+    return ((order[a.status] !== undefined ? order[a.status] : 2) -
+            (order[b.status] !== undefined ? order[b.status] : 2))
+  })
+
+  var inactive   = list.filter(function(p) { return p.status === 'inativo' }).length
+  var safeMargin = list.filter(function(p) { return p.status === 'margem'  }).length
+
+  settingsState.activityStatus = { inactive: inactive, safeMargin: safeMargin, list: list }
+}
+
 // Calcula status de atividade dos membros com base em lastActivityTime
 function computeActivityStatus(members) {
   var now = Date.now()
@@ -133,27 +162,16 @@ function renderSettingsPanel() {
   var identMargin = actStatus ? actStatus.safeMargin : 0
 
   content.innerHTML =
-    // ── Sincronização ──────────────────────────────────────────────────
+    // ── Allycode + info de sync ────────────────────────────────────────
     '<div style="margin-bottom:12px;">' +
       '<label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px;">Allycode (qualquer membro da guilda)</label>' +
       '<input id="settingsAllycode" type="text" value="' + settingsState.allycode + '"' +
         ' placeholder="Ex: 447623167"' +
-        ' style="width:100%;box-sizing:border-box;margin-bottom:8px;">' +
-      '<button onclick="syncGuild()" id="btnSyncGuild"' +
-        ' style="width:100%;padding:6px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">' +
-        '🔄 Sincronizar Guilda e Roster' +
-      '</button>' +
-    '</div>' +
-
-    '<div id="syncProgress" style="display:none;margin-bottom:10px;">' +
-      '<div style="font-size:11px;color:#94a3b8;" id="syncProgressText">Iniciando...</div>' +
-      '<div style="background:#334155;border-radius:4px;height:6px;margin-top:4px;">' +
-        '<div id="syncProgressBar" style="background:#4da6ff;height:6px;border-radius:4px;width:0%;transition:width 0.3s;"></div>' +
+        ' onchange="settingsState.allycode=this.value.replace(/\\D/g,\'\');localStorage.setItem(\'rote_allycode\',settingsState.allycode)"' +
+        ' style="width:100%;box-sizing:border-box;">' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:6px;">' +
+        lastSyncText + (memberCount ? ' (' + memberCount + ' jogadores)' : '') +
       '</div>' +
-    '</div>' +
-
-    '<div style="font-size:11px;color:#94a3b8;border-top:1px solid #334155;padding-top:8px;">' +
-      lastSyncText + (memberCount ? ' (' + memberCount + ' jogadores)' : '') +
     '</div>' +
 
     // ── Configurações ──────────────────────────────────────────────────
@@ -285,15 +303,21 @@ function renderActivityList() {
 function syncGuild() {
   if (settingsState.syncing) return
 
+  // Allycode: prioriza input no painel (se aberto), senão usa o salvo
   var allycodeInput = document.getElementById('settingsAllycode')
-  var allycode = allycodeInput ? allycodeInput.value.replace(/\D/g, '') : ''
+  var allycode = allycodeInput
+    ? allycodeInput.value.replace(/\D/g, '')
+    : settingsState.allycode
 
   if (!allycode) {
-    alert('Digite um allycode válido')
+    // Abrir settings para o usuário digitar o allycode
+    var panel = document.getElementById('settingsPanel')
+    if (panel) { panel.style.display = 'block'; renderSettingsPanel() }
+    alert('Configure o allycode no painel ⚙ Settings antes de sincronizar.')
     return
   }
 
-  // Salvar allycode
+  // Persistir allycode
   settingsState.allycode = allycode
   localStorage.setItem('rote_allycode', allycode)
 
@@ -351,7 +375,11 @@ function syncGuild() {
           if (btn) btn.disabled = false
 
           if (err) {
-            setSyncProgress('Erro na coleta: ' + err, 100)
+            setSyncProgress('❌ Erro: ' + err, 100)
+            setTimeout(function() {
+              var progress = document.getElementById('syncProgress')
+              if (progress) progress.style.display = 'none'
+            }, 3000)
             return
           }
 
@@ -362,7 +390,11 @@ function syncGuild() {
 
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
           setTimeout(function() {
-            renderSettingsPanel()
+            var progress = document.getElementById('syncProgress')
+            if (progress) progress.style.display = 'none'
+            // Atualizar painel se estiver aberto
+            var panel = document.getElementById('settingsPanel')
+            if (panel && panel.style.display !== 'none') renderSettingsPanel()
             // Atualizar coluna de platoons com dados reais
             if (typeof drawPlatoonList === 'function') drawPlatoonList()
             if (typeof drawFarmCritical === 'function') drawFarmCritical()
