@@ -72,6 +72,40 @@ var BATTLE_SCORE = {
 }
 
 /**
+ * Piloto principal de cada nave usada em missões de batalha.
+ * Usado para checar se o piloto está no relic mínimo do tier (garante vitória).
+ *
+ * Capital ships: o comandante que pilota/lidera a frota.
+ * Ships de combate: o piloto do cockpit.
+ *
+ * Garante vitória na batalha de frota: piloto no tier+1 (minRelic+1).
+ * Piloto no tier (minRelic): multiplicador reduzido (0.6×).
+ */
+var SHIP_PILOT = {
+  // Capital ships
+  'CAPITALEXECUTOR':    'VADER',
+  'CAPITALPROFUNDITY':  'ADMIRALRADDUS',
+  'CAPITALNEGOTIATOR':  'GENERALKENOBI',
+  'CAPITALLEVIATHAN':   'DARTHMALGUS',
+  'CAPITALCHIMAERA':    'GRANDADMIRALTHRAWN',
+  'CAPITALMALEVOLENCE': 'GRIEVOUS',
+  'CAPITALRADDUS':      'ADMIRALRADDUS',
+  'CAPITALFINALIZER':   'KYLORENUNMASKED',
+  'CAPITALSTARDESTROYER':'GRANDMOFFTARKIN',
+  // Ships de combate
+  'SCYTHE':             'LORDVADER',
+  'GHOST':              'HERASYNDULLAS3',
+  'OUTRIDER':           'DASHRENDAR',
+  'GAUNTLETSTARFIGHTER':'BOKATANMANDALORE',
+  'TIEFIGHTERIMPERIAL': 'TIEFIGHTERPILOT',
+  'MILLENNIUMFALCON':   'YOUNGLANDO',
+  'SLAVE1':             'BOBAFETT',
+  'HOUNDSTOOTH':        'BOSSK',
+  'RAZORCREST':         'THEMANDALORIAN',
+  'PHANTOM2':           'CHOPPERS3',
+}
+
+/**
  * Missões de batalha por planeta.
  * type:
  *   'squad'   = missão de esquadrão (waves:1 ou waves:2)

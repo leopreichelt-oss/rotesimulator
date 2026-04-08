@@ -258,6 +258,10 @@ var combatEngine = {
 
   STORAGE_KEY: 'rote_combat_battles_v1',
 
+  // GP de referência por relic para detecção de mods bons (proxy de qualidade)
+  // Valores baseados em média observada: personagem R5 nivel 85 sem mods ~20K, com mods médios ~27K
+  GP_BASELINE: { 5: 25000, 6: 31000, 7: 38000, 8: 46000, 9: 56000, 10: 68000 },
+
   // Verifica se um jogador tem a unidade no nível mínimo exigido
   _playerHasUnit: function(player, unitId, minRelic, isShip) {
     var unit = player.units.find(function(u) { return u.base_id === unitId })
@@ -266,6 +270,110 @@ var combatEngine = {
     return (typeof rosterEngine !== 'undefined')
       ? rosterEngine.toRelicLevel(unit.relic_tier) >= minRelic
       : (unit.relic_tier - 2) >= minRelic
+  },
+
+  // Relic real de uma unidade de um jogador (-1 se não tem)
+  _unitRelic: function(player, unitId) {
+    var unit = player.units ? player.units.find(function(u) { return u.base_id === unitId }) : null
+    if (!unit) return -1
+    return (typeof rosterEngine !== 'undefined')
+      ? rosterEngine.toRelicLevel(unit.relic_tier)
+      : Math.max(0, (unit.relic_tier || 0) - 2)
+  },
+
+  // Bônus de mods via GP proxy.
+  // Unidade com GP acima do baseline para seu relic → mods bons → +0.08 ou +0.15
+  _gpModBonus: function(player, unitId, relicLevel) {
+    var unit = player.units ? player.units.find(function(u) { return u.base_id === unitId }) : null
+    if (!unit || !unit.gp) return 0
+    var baseline = combatEngine.GP_BASELINE[relicLevel] || 30000
+    var ratio = unit.gp / baseline
+    if (ratio >= 1.4) return 0.15
+    if (ratio >= 1.2) return 0.08
+    return 0
+  },
+
+  // Multiplicador de GP para batalha de esquadrão.
+  // Baseado no relic do membro mais fraco do squad vs minRelic do planeta:
+  //   diff=0 → 0.6 (1.2 ondas), diff=1 → 0.8 (1.6 ondas), diff≥2 → 1.0 (2 ondas)
+  // + bônus de mods via GP do membro mais fraco (até +0.15)
+  _squadMultiplier: function(player, squadRequire, minRelic) {
+    var ce = combatEngine
+    var minRelicInSquad = squadRequire.reduce(function(acc, uid) {
+      var r = ce._unitRelic(player, uid)
+      return r >= 0 && r < acc ? r : acc
+    }, Infinity)
+    if (minRelicInSquad === Infinity) return 0.6
+
+    var diff = minRelicInSquad - minRelic
+    var base = diff <= 0 ? 0.6 : diff === 1 ? 0.8 : 1.0
+
+    // Bônus de mods: usa o membro mais fraco (bottleneck)
+    var weakestUid = squadRequire.reduce(function(worst, uid) {
+      var r = ce._unitRelic(player, uid)
+      var wr = worst ? ce._unitRelic(player, worst) : Infinity
+      return (r >= 0 && r < wr) ? uid : worst
+    }, null)
+    var modBonus = weakestUid ? ce._gpModBonus(player, weakestUid, minRelicInSquad) : 0
+
+    return Math.min(1.0, base + modBonus)
+  },
+
+  // Multiplicador de GP para batalha de frota.
+  // Checa o piloto principal da nave: garante 100% com piloto em minRelic+1,
+  // 60% com piloto em minRelic, e aplica bônus de mods do piloto.
+  _shipMultiplier: function(player, shipId, minRelic) {
+    var ce = combatEngine
+    var pilotId = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[shipId] : null
+    if (!pilotId) return 0.6  // sem dados de piloto: conservador
+
+    var pilotRelic = ce._unitRelic(player, pilotId)
+    if (pilotRelic < 0) return 0.3     // tem a nave mas não tem o piloto
+    if (pilotRelic < minRelic) return 0.3  // piloto abaixo do tier
+
+    var base = pilotRelic >= minRelic + 1 ? 1.0 : 0.6
+    var modBonus = ce._gpModBonus(player, pilotId, pilotRelic)
+    return Math.min(1.0, base + modBonus)
+  },
+
+  // Retorna o multiplicador de GP (0.3–1.0) para um jogador elegível em uma missão.
+  // Encontra o melhor squad elegível do jogador e calcula o multiplicador.
+  _playerGPMultiplier: function(player, missionReq, minRelic, planetName, missionType) {
+    var ce = combatEngine
+    if (missionType === 'special') return 0
+
+    var planetSquads = (typeof MISSION_SQUADS !== 'undefined' && planetName)
+      ? (MISSION_SQUADS[planetName] || {}) : {}
+    var squads = planetSquads[missionReq.n]
+
+    if (squads !== undefined) {
+      if (!squads || squads.length === 0) return 0
+      // Encontra o melhor squad (maior multiplicador)
+      var bestMult = 0
+      squads.forEach(function(squad) {
+        var squadIsShip = !!squad.isShip
+        var allMet = squad.require.every(function(uid) {
+          return ce._playerHasUnit(player, uid, minRelic, squadIsShip)
+        })
+        if (!allMet) return
+        var mult
+        if (squadIsShip) {
+          // Para squads de frota: usa o piloto da nave capital (primeiro elemento)
+          mult = ce._shipMultiplier(player, squad.require[0], minRelic)
+        } else {
+          mult = ce._squadMultiplier(player, squad.require, minRelic)
+        }
+        if (mult > bestMult) bestMult = mult
+      })
+      return bestMult
+    }
+
+    // Fallback keyUnit: sem dados de squad específico
+    if (missionType === 'ship') {
+      var shipId = missionReq.keyUnit ? missionReq.keyUnit[0] : null
+      return shipId ? ce._shipMultiplier(player, shipId, minRelic) : 0.6
+    }
+    return 0.6  // conservador para keyUnit genérico
   },
 
   // Verifica se um jogador é elegível para uma missão.
@@ -392,19 +500,20 @@ var combatEngine = {
       // Missões especiais de desbloqueio são tratadas por computeSpecialMissionEligible
       if (req.isSpecialUnlock) return
 
-      // Conta quantos jogadores são elegíveis para essa missão
-      var eligiblePlayers = players.filter(function(player) {
-        return combatEngine._playerEligible(player, req, minRelic, planetName)
-      }).length
+      var missionGP = combatEngine._missionGP(mission, tier)
 
-      if (eligiblePlayers === 0) return
+      players.forEach(function(player) {
+        if (!combatEngine._playerEligible(player, req, minRelic, planetName)) return
 
-      if (mission.type === 'squad')   squadBattles   += eligiblePlayers
-      if (mission.type === 'ship')    shipBattles    += eligiblePlayers
-      if (mission.type === 'special') specialBattles += eligiblePlayers
+        // Contagem binária de batalhas
+        if (mission.type === 'squad')   squadBattles++
+        if (mission.type === 'ship')    shipBattles++
+        if (mission.type === 'special') specialBattles++
 
-      // Acumula GP: pontuação da missão × jogadores elegíveis
-      totalGP += combatEngine._missionGP(mission, tier) * eligiblePlayers
+        // GP com multiplicador por relic/mods/piloto (0.3–1.0)
+        var mult = combatEngine._playerGPMultiplier(player, req, minRelic, planetName, mission.type)
+        totalGP += missionGP * mult
+      })
     })
 
     var totalScoreBattles = squadBattles + shipBattles

@@ -81,7 +81,8 @@ var rosterEngine = {
           relic_tier:  u.relic ? (u.relic.currentTier || 0) : 0,
           rarity:      rarity,
           combat_type: rosterEngine.isShip(baseId) ? 2 : 1,
-          level:       u.currentLevel || 0
+          level:       u.currentLevel || 0,
+          gp:          u.currentGalacticPower || 0
         }
       })
 
