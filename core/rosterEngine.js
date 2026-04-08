@@ -1,15 +1,29 @@
 /**
  * rosterEngine.js
- * Coleta roster via Cloudflare Worker → Railway Comlink → API do jogo
+ * Coleta roster via Cloudflare Worker -> Railway Comlink -> API do jogo
  *
  * relic_tier no Comlink: relic.currentTier
  * R5=7, R6=8, R7=9, R8=10, R9=11
  * Naves identificadas pela lista SHIP_IDS
+ *
+ * Cada unidade armazenada tem os campos:
+ *   base_id, relic_tier, rarity, combat_type, level, gp, mods
+ *
+ * mods: array de { tier, level, set, shape, primaryStatId, speedBonus }
+ *   tier  : 1-6 (E/D/C/B/A/S)
+ *   level : 1-15
+ *   set   : 1-8 (decodificado do definitionId)
+ *   shape : 1-6 (decodificado do definitionId)
+ *   primaryStatId: unitStatId do primario
+ *   speedBonus   : speed total nos secundarios deste mod (int, divisor 10000)
+ *
+ * modScore e modLabel sao calculados pelo modEngine e salvos na unidade
+ * para acesso rapido sem re-processar.
  */
 
 var COMLINK_URL = 'https://worker-lively-heart-f0a0.leopreichelt.workers.dev'
 
-// IDs de naves conhecidas no ROTE (extraídas do platoonRequirements)
+// IDs de naves conhecidas no ROTE (extraidas do platoonRequirements)
 var SHIP_IDS = {
   "CAPITALCHIMAERA":1,"CAPITALEXECUTOR":1,"CAPITALFINALIZER":1,
   "CAPITALJEDICRUISER":1,"CAPITALLEVIATHAN":1,"CAPITALMALEVOLENCE":1,
@@ -35,46 +49,79 @@ var SHIP_IDS = {
 }
 
 var rosterEngine = {
+  STORAGE_KEY:      'rote_roster_v3',
+  STORAGE_DATE_KEY: 'rote_roster_date_v3',
+  ACTIVITY_KEY:     'rote_activity_v1',
+  GUILD_GP_KEY:     'rote_guild_gp_v1',
 
-  STORAGE_KEY: 'rote_roster_v2',
-  STORAGE_DATE_KEY: 'rote_roster_date_v2',
-  ACTIVITY_KEY: 'rote_activity_v1',
-  GUILD_GP_KEY: 'rote_guild_gp_v1',
-
-  toRelicLevel: function(relicTier) {
+  toRelicLevel: function (relicTier) {
     if (!relicTier || relicTier < 3) return 0
     return relicTier - 2
   },
 
-  isShip: function(baseId) {
+  isShip: function (baseId) {
     return !!SHIP_IDS[baseId]
   },
 
-  meetsRequirement: function(unit, relicMin) {
+  meetsRequirement: function (unit, relicMin) {
     if (unit.combat_type === 2) return unit.rarity >= 7
     return rosterEngine.toRelicLevel(unit.relic_tier) >= relicMin
   },
 
-  fetchPlayer: function(playerId, fallbackName, callback) {
+  // Converte o array equippedStatMod[] da API em formato compacto
+  // Requer modEngine.js carregado para calcular score/label
+  _parseMods: function (equippedStatMod, baseId) {
+    if (!equippedStatMod || equippedStatMod.length === 0) return []
+    return equippedStatMod.map(function (m) {
+      var defId = parseInt(m.definitionId)
+      var shape = defId % 10
+      var set   = Math.floor(defId / 10) % 10
+      var speedBonus = 0
+      ;(m.secondaryStat || []).forEach(function (s) {
+        if (s.stat.unitStatId === 5) speedBonus += parseInt(s.stat.statValueDecimal) / 10000
+      })
+      return {
+        tier:          m.tier || 1,
+        level:         m.level || 1,
+        set:           set,
+        shape:         shape,
+        primaryStatId: m.primaryStat ? m.primaryStat.stat.unitStatId : 0,
+        speedBonus:    Math.round(speedBonus)
+      }
+    })
+  },
+
+  fetchPlayer: function (playerId, fallbackName, callback) {
     fetch(COMLINK_URL + '/player', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ payload: { playerId: playerId } })
     })
-    .then(function(r) { return r.json() })
-    .then(function(d) {
+    .then(function (r) { return r.json() })
+    .then(function (d) {
       var playerName = d.name || fallbackName || playerId
 
-      var units = (d.rosterUnit || []).map(function(u) {
-        var defId = u.definitionId || ''
-        var baseId = defId.split(':')[0]
-        // Rarity vem do definitionId: UNIT:THREE_STAR → 3
+      var units = (d.rosterUnit || []).map(function (u) {
+        var defId   = u.definitionId || ''
+        var baseId  = defId.split(':')[0]
         var rarityMap = {
           'ONE_STAR':1,'TWO_STAR':2,'THREE_STAR':3,
           'FOUR_STAR':4,'FIVE_STAR':5,'SIX_STAR':6,'SEVEN_STAR':7
         }
         var rarityStr = defId.split(':')[1] || ''
-        var rarity = rarityMap[rarityStr] || u.currentRarity || 0
+        var rarity    = rarityMap[rarityStr] || u.currentRarity || 0
+
+        // Mods: parseia para formato compacto
+        var mods = rosterEngine._parseMods(u.equippedStatMod || [], baseId)
+
+        // Score de mods: calcula via modEngine se disponivel
+        var modScore = 0
+        var modLabel = 'Sem mods'
+        if (mods.length > 0 && typeof modEngine !== 'undefined') {
+          var result = modEngine.scoreMods(u.equippedStatMod, baseId)
+          modScore = result.score
+          modLabel = result.label
+        }
 
         return {
           base_id:     baseId,
@@ -82,122 +129,125 @@ var rosterEngine = {
           rarity:      rarity,
           combat_type: rosterEngine.isShip(baseId) ? 2 : 1,
           level:       u.currentLevel || 0,
-          gp:          u.currentGalacticPower || 0
+          gp:          u.currentGalacticPower || 0,
+          mods:        mods,
+          modScore:    modScore,
+          modLabel:    modLabel
         }
       })
 
       // GAC / PSR
-      var pr = d.playerRating || {}
+      var pr  = d.playerRating || {}
       var psr = pr.playerSkillRating || {}
-      var prs = pr.playerRankStatus || {}
+      var prs = pr.playerRankStatus  || {}
       var gac = {
         skillRating: psr.skillRating || 0,
-        leagueId:    prs.leagueId   || 'CARBONITE',
-        divisionId:  prs.divisionId || 5
+        leagueId:    prs.leagueId    || 'CARBONITE',
+        divisionId:  prs.divisionId  || 5
       }
 
       callback(null, { playerId: playerId, name: playerName, units: units, gac: gac })
     })
-    .catch(function(e) { callback('Erro ' + (fallbackName||playerId) + ': ' + e.message) })
+    .catch(function (e) {
+      callback('Erro ' + (fallbackName || playerId) + ': ' + e.message)
+    })
   },
 
-  fetchAll: function(members, onProgress, onDone) {
+  fetchAll: function (members, onProgress, onDone) {
     var rosterMap = {}
-    var total = members.length
-    var current = 0
+    var total     = members.length
+    var current   = 0
 
-    function next() {
+    function next () {
       if (current >= total) {
         try {
           localStorage.setItem(rosterEngine.STORAGE_KEY, JSON.stringify(rosterMap))
           localStorage.setItem(rosterEngine.STORAGE_DATE_KEY, new Date().toISOString())
-        } catch(e) {}
+        } catch (e) {}
         return onDone(null, rosterMap)
       }
-
       var member = members[current]
       current++
       onProgress(current, total, member.name || ('Jogador ' + current))
-
-      setTimeout(function() {
-        rosterEngine.fetchPlayer(member.playerId, member.name, function(err, data) {
+      setTimeout(function () {
+        rosterEngine.fetchPlayer(member.playerId, member.name, function (err, data) {
           if (!err) rosterMap[member.playerId] = data
           next()
         })
       }, current === 1 ? 0 : 200)
     }
-
     next()
   },
 
-  load: function() {
+  load: function () {
     try {
       var d = localStorage.getItem(rosterEngine.STORAGE_KEY)
       return d ? JSON.parse(d) : null
-    } catch(e) { return null }
+    } catch (e) { return null }
   },
 
-  // Salva mapa de atividade { playerId: 'ativo'|'margem'|'inativo' }
-  saveActivity: function(activityMap) {
-    try { localStorage.setItem(rosterEngine.ACTIVITY_KEY, JSON.stringify(activityMap)) } catch(e) {}
+  saveActivity: function (activityMap) {
+    try { localStorage.setItem(rosterEngine.ACTIVITY_KEY, JSON.stringify(activityMap)) } catch (e) {}
   },
 
-  loadActivity: function() {
+  loadActivity: function () {
     try {
       var d = localStorage.getItem(rosterEngine.ACTIVITY_KEY)
       return d ? JSON.parse(d) : {}
-    } catch(e) { return {} }
+    } catch (e) { return {} }
   },
 
-  // Salva GP real por jogador { playerId: gp }
-  saveGuildGP: function(gpMap) {
-    try { localStorage.setItem(rosterEngine.GUILD_GP_KEY, JSON.stringify(gpMap)) } catch(e) {}
+  saveGuildGP: function (gpMap) {
+    try { localStorage.setItem(rosterEngine.GUILD_GP_KEY, JSON.stringify(gpMap)) } catch (e) {}
   },
 
-  loadGuildGP: function() {
+  loadGuildGP: function () {
     try {
       var d = localStorage.getItem(rosterEngine.GUILD_GP_KEY)
       return d ? JSON.parse(d) : {}
-    } catch(e) { return {} }
+    } catch (e) { return {} }
   },
 
-  // Retorna rosterMap excluindo inativos E margem identificada
-  // (margem não contribui com platoons/batalhas — GP já foi descontado individualmente)
-  loadActive: function() {
+  loadActive: function () {
     var rosterMap = rosterEngine.load()
     if (!rosterMap) return null
     var activity = rosterEngine.loadActivity()
-    var result = {}
-    Object.keys(rosterMap).forEach(function(pid) {
+    var result   = {}
+    Object.keys(rosterMap).forEach(function (pid) {
       var status = activity[pid]
-      if (status !== 'inativo' && status !== 'margem') {
-        result[pid] = rosterMap[pid]
-      }
+      if (status !== 'inativo' && status !== 'margem') result[pid] = rosterMap[pid]
     })
     return result
   },
 
-  lastSyncDate: function() {
+  lastSyncDate: function () {
     try {
       var d = localStorage.getItem(rosterEngine.STORAGE_DATE_KEY)
       return d ? new Date(d) : null
-    } catch(e) { return null }
+    } catch (e) { return null }
   },
 
-  // Para cada slot do platoon, retorna quais jogadores têm o personagem no nível mínimo
-  checkAvailability: function(rosterMap, platoonSlots, relicMin) {
+  checkAvailability: function (rosterMap, platoonSlots, relicMin) {
     var availability = {}
-    platoonSlots.forEach(function(slot) {
+    platoonSlots.forEach(function (slot) {
       var unitId = slot.unitId || slot
       if (!availability[unitId]) availability[unitId] = []
-      Object.values(rosterMap).forEach(function(player) {
-        var unit = player.units.find(function(u) { return u.base_id === unitId })
+      Object.values(rosterMap).forEach(function (player) {
+        var unit = player.units.find(function (u) { return u.base_id === unitId })
         if (unit && rosterEngine.meetsRequirement(unit, relicMin)) {
           availability[unitId].push(player.name)
         }
       })
     })
     return availability
-  }
+  },
 
+  // Retorna o mod score de uma unidade de um jogador.
+  // Recalcula a partir dos mods brutos se modEngine estiver disponivel.
+  // Se os mods estao em formato compacto (sem secondaryStat), usa modScore salvo.
+  getModScore: function (player, baseId) {
+    var unit = player.units.find(function (u) { return u.base_id === baseId })
+    if (!unit) return null
+    return { score: unit.modScore || 0, label: unit.modLabel || 'Sem mods' }
+  }
 }
