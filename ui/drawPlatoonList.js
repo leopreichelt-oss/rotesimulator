@@ -48,7 +48,10 @@ function updateAutoBattlesInState() {
     Object.keys(state.planets).forEach(function(name) {
       if (!state.planets[name] || !state.planets[name].phase) return
       var b = stored[name]
-      if (b) state.planets[name].autoBattles = b.safeBattles
+      if (b) {
+        state.planets[name].autoBattles = b.safeBattles
+        state.planets[name].autoGP      = b.safeGP
+      }
     })
     return
   }
@@ -57,7 +60,10 @@ function updateAutoBattlesInState() {
   Object.keys(state.planets).forEach(function(name) {
     if (!state.planets[name] || !state.planets[name].phase) return
     var b = computePlanetBattles(name)
-    if (b) state.planets[name].autoBattles = b.safeBattles
+    if (b) {
+      state.planets[name].autoBattles = b.safeBattles
+      state.planets[name].autoGP      = b.safeGP
+    }
   })
 }
 

@@ -223,17 +223,16 @@ results.push(result)
 // CALCULAR BATALHAS NO NÍVEL DA FASE
 // ----------------------
 
-// Batalhas: usa autoBattles (de combatData) se disponível, senão manual
-// autoBattles já é o safeBattles calculado (squad + ship * 0.8), sem especiais
-let totalBattlesPossible = results.reduce((s,p) => {
+// GP de batalhas: usa autoGP (do combatEngine, já ponderado por tipo/relic/mods)
+// autoGP distingue squad1 (1 onda), squad2 (2 ondas) e ship (2×squad2) com multiplicadores de relíquia
+// Fallback manual: count × BATTLE_POINTS[tier] × 0.8
+let totalBattleGPPossible = results.reduce((s,p) => {
   let pl = state.planets[p.name] || {}
-  let val = pl.autoBattles !== undefined ? Number(pl.autoBattles) : (Number(pl.battles) || 0)
-  return s + val
+  if (pl.autoGP !== undefined) return s + Number(pl.autoGP)
+  let tier = getPlanetTier(p.name)
+  let battles = Number(pl.battles) || 0
+  return s + Math.floor(battles * 0.8) * BATTLE_POINTS[tier]
 }, 0)
-let totalSafeBattles = totalBattlesPossible  // autoBattles já é safe; manual aplica 0.8
-if (results.some(p => (state.planets[p.name]?.autoBattles === undefined))) {
-  totalSafeBattles = Math.floor(totalBattlesPossible * 0.8)
-}
 
 let totalCarryInPhase = phasePlanets.reduce((s, name) => s + (state.planets[name]?.carryIn || 0), 0)
 let totalPlatoonPhase = results.reduce((s,p) => s + (p.platoonScore || 0), 0)
@@ -288,17 +287,19 @@ let usagePctMin = activeGPmin > 0 ? gpNeededPhaseMin / activeGPmin : 0
 usagePctMax = Math.min(1, Math.max(0, usagePctMax))
 usagePctMin = Math.min(1, Math.max(0, usagePctMin))
 
-let validBattlesPhaseMax = Math.min(Math.floor(totalBattlesPossible * usagePctMax), totalSafeBattles)
-let validBattlesPhaseMin = Math.min(Math.floor(totalBattlesPossible * usagePctMin), totalSafeBattles)
+let validBattleGPMax = Math.floor(totalBattleGPPossible * usagePctMax)
+let validBattleGPMin = Math.floor(totalBattleGPPossible * usagePctMin)
 
-let battlesPerPlanetMax = results.length > 0 ? Math.floor(validBattlesPhaseMax / results.length) : 0
-let battlesPerPlanetMin = results.length > 0 ? Math.floor(validBattlesPhaseMin / results.length) : 0
-
-// injetar batalhas e scores com GP proporcional por planeta
+// injetar batalhas proporcional ao autoGP de cada planeta (planetas com mais missões elegíveis recebem mais peso)
 results.forEach(p => {
+  let pl = state.planets[p.name] || {}
   let tier = getPlanetTier(p.name)
-  p.battleScoreMax = battlesPerPlanetMax * BATTLE_POINTS[tier]
-  p.battleScoreMin = battlesPerPlanetMin * BATTLE_POINTS[tier]
+  let planetBattleGP = pl.autoGP !== undefined
+    ? Number(pl.autoGP)
+    : Math.floor((Number(pl.battles) || 0) * 0.8) * BATTLE_POINTS[tier]
+  let prop = totalBattleGPPossible > 0 ? planetBattleGP / totalBattleGPPossible : 0
+  p.battleScoreMax = Math.floor(validBattleGPMax * prop)
+  p.battleScoreMin = Math.floor(validBattleGPMin * prop)
   p.scoreMax = (state.planets[p.name]?.carryIn || 0) + p.platoonScore + p.gpAllocatedMax + p.battleScoreMax
   p.scoreMin = (state.planets[p.name]?.carryIn || 0) + p.platoonScore + p.gpAllocatedMin + p.battleScoreMin
 })
@@ -483,12 +484,11 @@ let tier = getPlanetTier(name)
 
 let p = state.planets[name] || {}
 
-let battlesPossible = p.autoBattles !== undefined ? Number(p.autoBattles) : (Number(p.battles) || 0)
 let platoons = p.autoPlatoons !== undefined ? Number(p.autoPlatoons) : (Number(p.platoons) || 0)
 
-let safeBattles = Math.floor(battlesPossible * 0.8)
-
-let earlyBattleGP = safeBattles * BATTLE_POINTS[tier]
+let earlyBattleGP = p.autoGP !== undefined
+  ? Number(p.autoGP)
+  : Math.floor((p.autoBattles !== undefined ? Number(p.autoBattles) : Math.floor((Number(p.battles)||0) * 0.8)) * BATTLE_POINTS[tier])
 
 let platoonCost = 3150000 + ((tier-1) * 100000)
 
