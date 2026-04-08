@@ -179,10 +179,33 @@ var rosterEngine = {
     next()
   },
 
+  // Migra automaticamente dados do rote_roster_v2 para v3 (adiciona campos de mods)
+  // Chamada automaticamente por load() quando v3 esta vazio.
+  migrateFromV2: function () {
+    var OLD_KEY = 'rote_roster_v2'
+    var v2raw = null
+    try { v2raw = localStorage.getItem(OLD_KEY) } catch (e) {}
+    if (!v2raw) return null
+    try {
+      var v2data = JSON.parse(v2raw)
+      Object.values(v2data).forEach(function (player) {
+        ;(player.units || []).forEach(function (unit) {
+          if (!unit.mods)     unit.mods     = []
+          if (!unit.modScore) unit.modScore = 0
+          if (!unit.modLabel) unit.modLabel = 'Sem mods'
+        })
+      })
+      localStorage.setItem(rosterEngine.STORAGE_KEY, JSON.stringify(v2data))
+      return v2data
+    } catch (e) { return null }
+  },
+
   load: function () {
     try {
       var d = localStorage.getItem(rosterEngine.STORAGE_KEY)
-      return d ? JSON.parse(d) : null
+      if (d) return JSON.parse(d)
+      // v3 vazio: tentar migrar do v2
+      return rosterEngine.migrateFromV2()
     } catch (e) { return null }
   },
 
