@@ -332,19 +332,27 @@ function drawPlatoonList() {
 // =====================================================
 function _specialMissionBanner(planets) {
   var banners = []
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+
   planets.forEach(function(name) {
-    var bonusPlanet = Object.keys(typeof planetData !== 'undefined' ? planetData : {}).find(function(p) {
-      return planetData[p].unlock === 'specialMission' && planetData[p].missionPlanet === name
-    })
-    if (!bonusPlanet) return
-    var sm = state.specialMission ? state.specialMission[name] : null
-    var victories = sm === true ? 30 : (Number(sm) || 0)
-    var unlocked = victories >= 30
+    // Só Bracca e Tatooine têm missão especial de desbloqueio
+    if (name !== 'Bracca' && name !== 'Tatooine') return
+
+    var specialResult = (typeof combatEngine !== 'undefined' && rosterMap)
+      ? combatEngine.computeSpecialMissionEligible(name, rosterMap)
+      : null
+
+    if (!specialResult) return
+
+    var victories  = specialResult.eligible
+    var bonusPlanet = specialResult.unlocks
+    var need       = specialResult.winsRequired
+    var unlocked   = victories >= need
     var color = unlocked ? '#4ade80' : '#f59e0b'
     var icon  = unlocked ? '🔓' : '🔒'
     var txt = unlocked
-      ? icon + ' ' + bonusPlanet + ' desbloqueado (' + victories + ' vitórias)'
-      : icon + ' Missão especial de ' + name + ': ' + victories + '/30 vitórias → libera ' + bonusPlanet
+      ? icon + ' ' + bonusPlanet + ' desbloqueado (' + victories + ' jogadores elegíveis)'
+      : icon + ' Missão especial de ' + name + ': ' + victories + '/' + need + ' jogadores elegíveis → libera ' + bonusPlanet
     banners.push('<div style="font-size:10px;color:' + color + ';margin-top:3px;">' + txt + '</div>')
   })
   return banners.join('')
