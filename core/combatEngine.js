@@ -285,7 +285,17 @@ var combatEngine = {
   // Unidade com GP acima do baseline para seu relic → mods bons → +0.08 ou +0.15
   _gpModBonus: function(player, unitId, relicLevel) {
     var unit = player.units ? player.units.find(function(u) { return u.base_id === unitId }) : null
-    if (!unit || !unit.gp) return 0
+    if (!unit) return 0
+    // Usa modScore real (0-100) se disponivel (requer roster sincronizado com modEngine)
+    // Excelente(>=85)=+0.15, Bom(>=70)=+0.10, Regular(>=55)=+0.05
+    if (unit.modScore && unit.modScore > 0) {
+      if (unit.modScore >= 85) return 0.15
+      if (unit.modScore >= 70) return 0.10
+      if (unit.modScore >= 55) return 0.05
+      return 0
+    }
+    // Fallback: proxy de GP (roster antigo sem modScore)
+    if (!unit.gp) return 0
     var baseline = combatEngine.GP_BASELINE[relicLevel] || 30000
     var ratio = unit.gp / baseline
     if (ratio >= 1.4) return 0.15
