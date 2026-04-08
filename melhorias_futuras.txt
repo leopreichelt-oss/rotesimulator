@@ -1,7 +1,7 @@
 ROTE Planner — Melhorias Futuras
 =================================
 Gerado em: 2026-04-07
-Base: commit 185c35e (rosterEngine v3 + modEngine + combatEngine com modScore)
+Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
 
 ================================================================================
 ALTA PRIORIDADE
@@ -26,14 +26,6 @@ ALTA PRIORIDADE
       e capturar o base_id correto do definitionId.
     - Impacto: missões que dependem dessas unidades estão usando keyUnit fallback,
       o que pode inflar ou deflacionar as contagens.
-
-[3] Calibração dos multiplicadores de onda
-    - Situação: os multiplicadores atuais (relic diff 0→0.6×, 1→0.8×, ≥2→1.0×)
-      são estimativas. A ideia de ondas parciais (R5=1.2, R6=1.6, R7=2.0) foi
-      aprovada conceitualmente mas ainda não integrada ao cálculo final de GP.
-    - Ação: substituir os multiplicadores binários por fator contínuo baseado em
-      ondas × score de mods; validar contra resultados reais de TBs passadas.
-    - Impacto: estimativas de GP por planeta muito mais precisas.
 
 ================================================================================
 MÉDIA PRIORIDADE
