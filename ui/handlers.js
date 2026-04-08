@@ -115,6 +115,14 @@ function applySimMode() {
 // BATALHAS DO PLANETA (combat data)
 // ----------------------
 
+// Formata GP: ≥1M → "1.4M", ≥1000 → "400K", resto → número
+function _fmtGP(n) {
+  if (!n) return '0'
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (n >= 1000)    return Math.round(n / 1000) + 'K'
+  return String(n)
+}
+
 function updatePlanetBattleInfo(name) {
   var infoEl   = document.getElementById('planetBattleInfo')
   var mapLink  = document.getElementById('planetMapLink')
@@ -157,11 +165,14 @@ function updatePlanetBattleInfo(name) {
 
   infoEl.innerHTML =
     '<div style="background:#0f2744;border-radius:4px;padding:4px 6px;">' +
-      '<span style="color:#4da6ff;">⚔ ' + b.squadBattles + ' esquadrão</span>' +
+      '<span style="color:#4da6ff;">⚔ ' + b.squadBattles + ' esq.</span>' +
       ' &nbsp;' +
       '<span style="color:#a78bfa;">🚀 ' + b.shipBattles + ' nave</span>' +
-      (b.specialBattles ? ' &nbsp;<span style="color:#94a3b8;">★ ' + b.specialBattles + ' especial</span>' : '') +
-      '<br><span style="color:#64748b;font-size:10px;">Safe: ' + b.safeBattles + ' &nbsp;|&nbsp; Total score: ' + b.totalScoreBattles + '</span>' +
+      (b.specialBattles ? ' &nbsp;<span style="color:#94a3b8;">★ ' + b.specialBattles + ' esp.</span>' : '') +
+      '<br>' +
+      (b.totalGP
+        ? '<span style="color:#4ade80;font-size:10px;">GP: ' + _fmtGP(b.safeGP) + ' safe &nbsp;|&nbsp; ' + _fmtGP(b.totalGP) + ' máx</span>'
+        : '<span style="color:#64748b;font-size:10px;">Safe: ' + b.safeBattles + ' &nbsp;|&nbsp; Total: ' + b.totalScoreBattles + '</span>') +
     '</div>'
 }
 

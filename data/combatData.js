@@ -54,10 +54,28 @@ var PLANET_MAP_URL = {
 }
 
 /**
+ * Pontuação de GP por tipo de batalha e tier do planeta.
+ *
+ * squad1 = missão de esquadrão com 1 onda (máximo)
+ * squad2 = missão de esquadrão com 2 ondas (padrão)
+ * ship   = missão de frota (1 onda, pontuação maior)
+ *
+ * Fonte: valores exatos fornecidos pela guilda.
+ */
+var BATTLE_SCORE = {
+  1: { squad1:  100000, squad2:  200000, ship:   400000 },
+  2: { squad1:  125000, squad2:  250000, ship:   500000 },
+  3: { squad1:  162500, squad2:  341250, ship:   682500 },
+  4: { squad1:  219375, squad2:  493594, ship:   987188 },
+  5: { squad1:  307125, squad2:  721744, ship:  1443488 },
+  6: { squad1:  460688, squad2: 1151719, ship:  2303438 }
+}
+
+/**
  * Missões de batalha por planeta.
  * type:
- *   'squad'   = 2 ondas, pontuação de GP normal
- *   'ship'    = 1 onda, pontuação de nave (diferente)
+ *   'squad'   = missão de esquadrão (waves:1 ou waves:2)
+ *   'ship'    = missão de frota (waves:1, pontuação de nave)
  *   'special' = sem pontuação de GP (material / desbloqueia planeta)
  *
  * eligibleCount  = número de squads elegíveis (mas apenas 1 batalha por missão)

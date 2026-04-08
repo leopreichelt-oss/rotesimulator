@@ -356,16 +356,34 @@ var combatEngine = {
     }
   },
 
+  // Calcula a pontuação de GP de uma missão (por jogador elegível)
+  _missionGP: function(mission, tier) {
+    if (mission.type === 'ship') {
+      return (typeof BATTLE_SCORE !== 'undefined' && BATTLE_SCORE[tier])
+        ? BATTLE_SCORE[tier].ship : 0
+    }
+    if (mission.type === 'squad') {
+      var waves = mission.waves || 2
+      var key = waves === 1 ? 'squad1' : 'squad2'
+      return (typeof BATTLE_SCORE !== 'undefined' && BATTLE_SCORE[tier])
+        ? BATTLE_SCORE[tier][key] : 0
+    }
+    return 0  // special não pontua
+  },
+
   // Computa batalhas elegíveis por planeta para todos os jogadores ativos
   computeForPlanet: function(planetName, rosterMap, minRelic) {
     var combatData = (typeof PLANET_COMBAT_DATA !== 'undefined') ? PLANET_COMBAT_DATA[planetName] : null
     var missionReqs = COMBAT_MISSION_REQS[planetName]
     if (!combatData || !missionReqs || !rosterMap) return null
 
+    var tier = (typeof getPlanetTier === 'function') ? getPlanetTier(planetName) : 1
+
     var players = Object.values(rosterMap)
     var squadBattles   = 0
     var shipBattles    = 0
     var specialBattles = 0
+    var totalGP        = 0
 
     combatData.missions.forEach(function(mission) {
       var req = missionReqs.find(function(r) { return r.n === mission.n })
@@ -384,17 +402,24 @@ var combatEngine = {
       if (mission.type === 'squad')   squadBattles   += eligiblePlayers
       if (mission.type === 'ship')    shipBattles    += eligiblePlayers
       if (mission.type === 'special') specialBattles += eligiblePlayers
+
+      // Acumula GP: pontuação da missão × jogadores elegíveis
+      totalGP += combatEngine._missionGP(mission, tier) * eligiblePlayers
     })
 
     var totalScoreBattles = squadBattles + shipBattles
     var safeBattles = Math.floor(totalScoreBattles * 0.8)
+    var safeGP      = Math.floor(totalGP * 0.8)
 
     return {
       squadBattles:      squadBattles,
       shipBattles:       shipBattles,
       specialBattles:    specialBattles,
       totalScoreBattles: totalScoreBattles,
-      safeBattles:       safeBattles
+      safeBattles:       safeBattles,
+      totalGP:           totalGP,
+      safeGP:            safeGP,
+      tier:              tier
     }
   },
 
