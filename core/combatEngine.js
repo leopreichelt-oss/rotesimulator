@@ -304,19 +304,23 @@ var combatEngine = {
   },
 
   // Multiplicador de GP para batalha de esquadrão.
-  // Baseado no relic do membro mais fraco do squad vs minRelic do planeta:
-  //   diff=0 → 0.6 (1.2 ondas), diff=1 → 0.8 (1.6 ondas), diff≥2 → 1.0 (2 ondas)
+  // Fórmula contínua de ondas: diff=0 → 1.2 ondas, diff=1 → 1.6, diff≥2 → 2.0 (máx)
+  //   mult = min(maxWaves, 1.2 + 0.4 × diff) / maxWaves
+  // Para missões de 1 onda (maxWaves=1): qualquer jogador elegível completa 100%
+  // Para missões de 2 ondas (maxWaves=2): 0.60 / 0.80 / 1.00 conforme diff
   // + bônus de mods via GP do membro mais fraco (até +0.15)
-  _squadMultiplier: function(player, squadRequire, minRelic) {
+  _squadMultiplier: function(player, squadRequire, minRelic, missionWaves) {
     var ce = combatEngine
+    var maxWaves = missionWaves || 2
     var minRelicInSquad = squadRequire.reduce(function(acc, uid) {
       var r = ce._unitRelic(player, uid)
       return r >= 0 && r < acc ? r : acc
     }, Infinity)
     if (minRelicInSquad === Infinity) return 0.6
 
-    var diff = minRelicInSquad - minRelic
-    var base = diff <= 0 ? 0.6 : diff === 1 ? 0.8 : 1.0
+    var diff = Math.max(0, minRelicInSquad - minRelic)
+    var completedWaves = Math.min(maxWaves, 1.2 + 0.4 * diff)
+    var base = completedWaves / maxWaves
 
     // Bônus de mods: usa o membro mais fraco (bottleneck)
     var weakestUid = squadRequire.reduce(function(worst, uid) {
@@ -330,25 +334,28 @@ var combatEngine = {
   },
 
   // Multiplicador de GP para batalha de frota.
-  // Checa o piloto principal da nave: garante 100% com piloto em minRelic+1,
-  // 60% com piloto em minRelic, e aplica bônus de mods do piloto.
+  // Fórmula contínua: diff=0 (piloto no tier) → 0.6×, diff≥1 (tier+1) → 1.0×
+  //   mult = min(1.0, 0.6 + 0.4 × diff)
+  // + bônus de mods do piloto (até +0.15)
   _shipMultiplier: function(player, shipId, minRelic) {
     var ce = combatEngine
     var pilotId = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[shipId] : null
     if (!pilotId) return 0.6  // sem dados de piloto: conservador
 
     var pilotRelic = ce._unitRelic(player, pilotId)
-    if (pilotRelic < 0) return 0.3     // tem a nave mas não tem o piloto
-    if (pilotRelic < minRelic) return 0.3  // piloto abaixo do tier
+    if (pilotRelic < 0) return 0.3          // tem a nave mas não tem o piloto
+    if (pilotRelic < minRelic) return 0.3   // piloto abaixo do tier mínimo
 
-    var base = pilotRelic >= minRelic + 1 ? 1.0 : 0.6
+    var diff = Math.max(0, pilotRelic - minRelic)
+    var base = Math.min(1.0, 0.6 + 0.4 * diff)
     var modBonus = ce._gpModBonus(player, pilotId, pilotRelic)
     return Math.min(1.0, base + modBonus)
   },
 
   // Retorna o multiplicador de GP (0.3–1.0) para um jogador elegível em uma missão.
   // Encontra o melhor squad elegível do jogador e calcula o multiplicador.
-  _playerGPMultiplier: function(player, missionReq, minRelic, planetName, missionType) {
+  // missionWaves: número de ondas da missão (1 ou 2) — afeta _squadMultiplier
+  _playerGPMultiplier: function(player, missionReq, minRelic, planetName, missionType, missionWaves) {
     var ce = combatEngine
     if (missionType === 'special') return 0
 
@@ -371,7 +378,7 @@ var combatEngine = {
           // Para squads de frota: usa o piloto da nave capital (primeiro elemento)
           mult = ce._shipMultiplier(player, squad.require[0], minRelic)
         } else {
-          mult = ce._squadMultiplier(player, squad.require, minRelic)
+          mult = ce._squadMultiplier(player, squad.require, minRelic, missionWaves)
         }
         if (mult > bestMult) bestMult = mult
       })
@@ -521,7 +528,7 @@ var combatEngine = {
         if (mission.type === 'special') specialBattles++
 
         // GP com multiplicador por relic/mods/piloto (0.3–1.0)
-        var mult = combatEngine._playerGPMultiplier(player, req, minRelic, planetName, mission.type)
+        var mult = combatEngine._playerGPMultiplier(player, req, minRelic, planetName, mission.type, mission.waves || 2)
         totalGP += missionGP * mult
       })
     })
