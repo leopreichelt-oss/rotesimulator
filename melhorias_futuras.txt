@@ -4,19 +4,6 @@ Gerado em: 2026-04-07 / Atualizado em: 2026-04-08
 Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
 
 ================================================================================
-ALTA PRIORIDADE
-================================================================================
-
-[1] Completar perfis de mods no modEngine — CONCLUÍDO (2026-04-08)
-    - 26 perfis adicionados: GLs (SLK, SEE), Executor crew (VADER, ADMIRALPIETT,
-      GRANDADMIRALTHRAWN, DEATHTROOPER, MOFFGIDEONTROOPER, EMPERORPALPATINE, MARAJADE),
-      Profundity crew (ADMIRALRADDUS, JYNERSO, K2SO, SCARIFPATHFINDER), LS Jedi/Rebeldes
-      (COMMANDERAHSOKA, JEDIKNIGHTLUKE, COMMANDERLUKESKYWALKER, GRANDMASTERYODA,
-      AHSOKATANO, ANAKINKNIGHT, JEDIKNIGHTCAL, BOKATANMANDALORE), FO/DS
-      (KYLORENUNMASKED, GENERALHUX, DARTHMALAK, DARTHNIHILUS, BASTILASHANDARK).
-    - Total: ~52 perfis específicos (era ~26).
-
-================================================================================
 MÉDIA PRIORIDADE
 ================================================================================
 
@@ -41,26 +28,11 @@ MÉDIA PRIORIDADE
     - Situação: a coluna de platoons mostra "X/6" disponíveis por slot, mas não
       lista quais jogadores têm cada unidade.
     - Ação: ao clicar em um slot de platoon, abrir um mini-painel (similar ao
-      battleMap) com a lista de jogadores que têm a unidade no nível mínimo,
-      ordenados por relíquia e modScore.
-
-================================================================================
-BAIXA PRIORIDADE
-================================================================================
-
-[10] Validação de omicrons
-    - Situação: algumas habilidades de platoon são omicron-dependentes (ex:
-      Executor requer Vader com omicron no modo TB). O sistema não valida isso.
-    - Ação: mapear quais unidades precisam de omicron para contribuir com
-      eficiência máxima; adicionar flag "omicron" por unidade no rosterEngine
-      e usar no multiplier.
-
-
-[13] Mapeamento de abreviações de jogadores
-    - Situação: nomes de jogadores no roster podem ter caracteres especiais ou
-      abreviações que não batem com os nomes no Discord/WhatsApp da guilda.
-    - Ação: permitir que o líder mapeie "alias → playerId" nas configurações;
-      usar o alias nos briefings e no mapa de batalhas.
+      battleMap) com os personagems q estão com sobra 0 até +3 com a lista 
+      de jogadores que têm a unidade no nível mínimo,ordenados por relíquia 
+      e modScore. dando preferencia para os personagens elegiveis com o pior desempenho 
+      pro platoon.  gerar uma lista de alocação interna q será utilizada futuramente em um 
+      sistema de platoon automático q será desenvolvido futuramente. 
 
 ================================================================================
 NOTAS TÉCNICAS

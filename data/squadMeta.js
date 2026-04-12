@@ -183,6 +183,7 @@ var SQUAD_META = [
     journeyUnit: 'LORDVADER', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'DS', leagueMin: 'CHROMIUM',
+    omicronUnits: ['VADER', 'GRANDADMIRALTHRAWN'],
     note: 'GL — requer jornada heroica. Melhor squad DS da GAC quando disponível.'
   },
   {
@@ -209,6 +210,7 @@ var SQUAD_META = [
     journeyUnit: 'GENERALSKYWALKER', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'LS', leagueMin: 'BRONZIUM',
+    omicronUnits: ['GENERALSKYWALKER'],
     note: 'GAS requer evento lendário (Padmé + Separatistas). Top GAC. Rex e GAS essenciais para ROTE LS.'
   },
   {
@@ -220,6 +222,7 @@ var SQUAD_META = [
     journeyUnit: 'PADMEAMIDALA', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'LS', leagueMin: 'BRONZIUM',
+    omicronUnits: ['PADMEAMIDALA'],
     note: 'Padmé requer evento lendário (Geonosianos + outros Separatistas). Forte no mid game.'
   },
   {
@@ -325,6 +328,7 @@ var SQUAD_META = [
     journeyUnit: 'JEDIMASTERKENOBI', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'LS', leagueMin: 'CHROMIUM',
+    omicronUnits: ['GENERALSKYWALKER', 'COMMANDERAHSOKA', 'PADMEAMIDALA'],
     note: 'GL — requer jornada heroica. JMK + CAT é o squad mais forte do jogo.'
   }
 
