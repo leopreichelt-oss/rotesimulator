@@ -82,27 +82,83 @@ var BATTLE_SCORE = {
  * Piloto no tier (minRelic): multiplicador reduzido (0.6×).
  */
 var SHIP_PILOT = {
-  // Capital ships
-  'CAPITALEXECUTOR':    'VADER',
-  'CAPITALPROFUNDITY':  'ADMIRALRADDUS',
-  'CAPITALNEGOTIATOR':  'GENERALKENOBI',
-  'CAPITALLEVIATHAN':   'DARTHMALGUS',
-  'CAPITALCHIMAERA':    'GRANDADMIRALTHRAWN',
-  'CAPITALMALEVOLENCE': 'GRIEVOUS',
-  'CAPITALRADDUS':      'ADMIRALRADDUS',
-  'CAPITALFINALIZER':   'KYLORENUNMASKED',
-  'CAPITALSTARDESTROYER':'GRANDMOFFTARKIN',
-  // Ships de combate
-  'SCYTHE':             'LORDVADER',
-  'GHOST':              'HERASYNDULLAS3',
-  'OUTRIDER':           'DASHRENDAR',
-  'GAUNTLETSTARFIGHTER':'BOKATANMANDALORE',
-  'TIEFIGHTERIMPERIAL': 'TIEFIGHTERPILOT',
-  'MILLENNIUMFALCON':   'YOUNGLANDO',
-  'SLAVE1':             'BOBAFETT',
-  'HOUNDSTOOTH':        'BOSSK',
-  'RAZORCREST':         'THEMANDALORIAN',
-  'PHANTOM2':           'CHOPPERS3',
+  // ── Capital ships ─────────────────────────────────────────────────────
+  'CAPITALEXECUTOR':          'VADER',
+  'CAPITALPROFUNDITY':        'ADMIRALRADDUS',
+  'CAPITALNEGOTIATOR':        'GENERALKENOBI',
+  'CAPITALLEVIATHAN':         'DARTHMALGUS',
+  'CAPITALCHIMAERA':          'GRANDADMIRALTHRAWN',
+  'CAPITALMALEVOLENCE':       'GRIEVOUS',
+  'CAPITALRADDUS':            'ADMIRALRADDUS',
+  'CAPITALFINALIZER':         'KYLORENUNMASKED',
+  'CAPITALSTARDESTROYER':     'GRANDMOFFTARKIN',
+  'CAPITALJEDICRUISER':       'PADMEAMIDALA',
+  'CAPITALMONCALAMARICRUISER':'ADMIRALACKBAR',
+
+  // ── Galactic Republic / Clone Wars ────────────────────────────────────
+  'ARC170CLONESERGEANT':      'CLONESERGEANTPHASEI',
+  'ARC170REX':                'CT7567',
+  'BLADEOFDORIN':             'PLOKOON',
+  'JEDISTARFIGHTERANAKIN':    'ANAKINKNIGHT',
+  'JEDISTARFIGHTERCONSULAR':  'JEDIKNIGHTCONSULAR',
+  'UMBARANSTARFIGHTER':       'CT210408',
+  'YWINGCLONEWARS':           'BARRISSOFFEE',
+
+  // ── CIS / Separatistas ────────────────────────────────────────────────
+  'GEONOSIANSTARFIGHTER2':    'GEONOSIANSOLDIER',
+  'GEONOSIANSTARFIGHTER3':    'SUNFAC',
+  'HYENABOMBER':              'POGGLETHELESSER',
+  'STAP':                     'B1BATTLEDROIDV2',
+  'VULTUREDROID':             'DROIDEKA',
+
+  // ── Old Republic / Império Sith ───────────────────────────────────────
+  'EBONHAWK':                 'CARTHONASI',
+  'FURYCLASSINTERCEPTOR':     'DARTHREVAN',
+  'SITHFIGHTER':              'SITHASSASSIN',
+  'SITHBOMBER':               'SITHMARAUDER',
+  'SITHINFILTRATOR':          'MAUL',
+
+  // ── Império Galáctico ─────────────────────────────────────────────────
+  'COMMANDSHUTTLE':           'ADMIRALPIETT',
+  'EMPERORSSHUTTLE':          'EMPERORPALPATINE',
+  'IDENVERSIOEMPIRE':         'IDENVERSIOEMPIRE',
+  'TIEADVANCED':              'VADER',
+  'TIEBOMBERIMPERIAL':        'COLONELSTARCK',
+  'TIEFIGHTERFIRSTORDER':     'FIRSTORDERTROOPER',
+  'TIEFIGHTERFOSF':           'FIRSTORDERSPECIALFORCESPILOT',
+  'TIEINTERCEPTOR':           'ROYALGUARD',
+  'TIEREAPER':                'DIRECTORKRENNIC',
+  'TIESILENCER':              'KYLORENUNMASKED',
+  'SITHSUPREMACYCLASS':       'SUPREMELEADERKYLOREN',
+
+  // ── Rebeldes / LS ─────────────────────────────────────────────────────
+  'COMEUPPANCE':              'AMILYNHOLDO',
+  'MG100STARFORTRESSSF17':    'ROSETICO',
+  'MILLENNIUMFALCONPRISTINE': 'HANSOLO',
+  'RAVENSCLAW':               'KYLEKATARN',
+  'UWINGROGUEONE':            'CASSIANANDOR',
+  'UWINGSCARIF':              'BODHIROOK',
+  'XWINGBLACKONE':            'EPIXPOE',
+  'XWINGRED2':                'WEDGEANTILLES',
+  'XWINGRED3':                'BIGGSDARKLIGHTER',
+  'XWINGRESISTANCE':          'RESISTANCEPILOT',
+  'YWINGREBEL':               'HOTHREBELSCOUT',
+
+  // ── Caçadores / Mistos ────────────────────────────────────────────────
+  'IG2000':                   'IG88',
+  'XANADUBLOOD':              'AURRA_SING',
+
+  // ── Ships nomeados já mapeados ────────────────────────────────────────
+  'SCYTHE':                   'LORDVADER',
+  'GHOST':                    'HERASYNDULLAS3',
+  'OUTRIDER':                 'DASHRENDAR',
+  'GAUNTLETSTARFIGHTER':      'BOKATANMANDALORE',
+  'TIEFIGHTERIMPERIAL':       'TIEFIGHTERPILOT',
+  'MILLENNIUMFALCON':         'YOUNGLANDO',
+  'SLAVE1':                   'BOBAFETT',
+  'HOUNDSTOOTH':              'BOSSK',
+  'RAZORCREST':               'THEMANDALORIAN',
+  'PHANTOM2':                 'CHOPPERS3',
 }
 
 /**

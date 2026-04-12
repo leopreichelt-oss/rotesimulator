@@ -1,18 +1,11 @@
 ROTE Planner — Melhorias Futuras
 =================================
-Gerado em: 2026-04-07 / Atualizado em: 2026-04-08
+Gerado em: 2026-04-07 / Atualizado em: 2026-04-12
 Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
 
 ================================================================================
 MÉDIA PRIORIDADE
 ================================================================================
-
-[4] Validação completa dos pilotos de naves capitais
-    - Situação: SHIP_PILOT em combatData.js cobre as principais capitais, mas
-      naves de apoio (X-Wings, TIEs, etc.) não têm mapeamento de piloto.
-    - Ação: mapear piloto → nave para todas as naves presentes nos platoons de ROTE;
-      ajustar _shipMultiplier para considerar pilotos de naves menores.
-    - Impacto: GP de slots de naves menores passa a refletir qualidade do piloto.
 
 [5] Mapa de batalhas — melhorias de UX
     - Situação: o modal atual (drawBattleMap.js) mostra jogadores elegíveis e
@@ -28,22 +21,15 @@ MÉDIA PRIORIDADE
     - Situação: a coluna de platoons mostra "X/6" disponíveis por slot, mas não
       lista quais jogadores têm cada unidade.
     - Ação: ao clicar em um slot de platoon, abrir um mini-painel (similar ao
-      battleMap) com os personagems q estão com sobra 0 até +3 com a lista 
-      de jogadores que têm a unidade no nível mínimo,ordenados por relíquia 
-      e modScore. dando preferencia para os personagens elegiveis com o pior desempenho 
-      pro platoon.  gerar uma lista de alocação interna q será utilizada futuramente em um 
-      sistema de platoon automático q será desenvolvido futuramente. 
+      battleMap) com os personagems q estão com sobra 0 até +3 com a lista
+      de jogadores que têm a unidade no nível mínimo,ordenados por relíquia
+      e modScore. dando preferencia para os personagens elegiveis com o pior desempenho
+      pro platoon.  gerar uma lista de alocação interna q será utilizada futuramente em um
+      sistema de platoon automático q será desenvolvido futuramente.
 
 ================================================================================
 NOTAS TÉCNICAS
 ================================================================================
-
-- Base IDs a confirmar via Comlink (endpoint /player → rosterUnit[].definitionId):
-  GL Ahsoka: buscar conta com "GLAT" ou similar
-  Mace Windu GL: "JEDIMASTER_MACEWINDU" ou "JMMW"
-  Enoch: "INQUISITORENOCH" ou "ENOCH"
-  Dark Trooper Purge: "DARKTROOPERPURGE" ou "PURGEROOPER"
-  Night Trooper: "NIGHTTROOPER" ou "NTTROOPER"
 
 - Comlink URL atual: https://worker-lively-heart-f0a0.leopreichelt.workers.dev
 - Armazenamento local: rote_roster_v3, rote_activity_v1, rote_guild_gp_v1
