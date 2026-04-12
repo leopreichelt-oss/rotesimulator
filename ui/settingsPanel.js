@@ -358,6 +358,12 @@ function syncGuild() {
     guildData.members.forEach(function(m) { gpMap[m.playerId] = m.gp || 0 })
     rosterEngine.saveGuildGP(gpMap)
 
+    // Invalidar roster e cache de batalhas da guilda anterior ANTES de buscar o novo
+    // Evita que calculate() e drawPlatoonList() usem dados da guilda errada durante o fetchAll
+    try { localStorage.removeItem(rosterEngine.STORAGE_KEY) } catch(e) {}
+    try { localStorage.removeItem(combatEngine.STORAGE_KEY) } catch(e) {}
+    try { localStorage.removeItem(rosterEngine.ACTIVITY_KEY) } catch(e) {}
+
     // Calcular inativos/margem a partir do lastActivityTime
     var actStatus = computeActivityStatus(guildData.members)
     settingsState.activityStatus = actStatus
@@ -407,8 +413,8 @@ function syncGuild() {
             // Atualizar painel se estiver aberto
             var panel = document.getElementById('settingsPanel')
             if (panel && panel.style.display !== 'none') renderSettingsPanel()
-            // Atualizar coluna de platoons com dados reais
-            if (typeof drawPlatoonList === 'function') drawPlatoonList()
+            // Recalcular tudo: atualiza mapa, lista de planetas, batalhas e platoons
+            if (typeof calculate === 'function') calculate()
             if (typeof drawFarmCritical === 'function') drawFarmCritical()
           }, 1500)
         }
