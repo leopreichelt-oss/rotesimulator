@@ -94,6 +94,43 @@ var modEngine = (function () {
     'BASTILASHAN':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
     'DARTHSION':          { wantedSets: [1,3,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.7 },
     'DARTHTRAYA':         { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    // GL / topo (adicionais)
+    'SUPREMELEADERKYLOREN':   { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.9 },
+    'SITHETERNALPALPATINE':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    'GLAHSOKATANO':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'JEDIMASTERMACEWINDU':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    // Imperial Remnant (Peridea)
+    'CAPTAINENOCH':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'NIGHTTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'DEATHTROOPERPERIDEA':    { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    // Executor crew (DS Imperio)
+    'VADER':                  { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'ADMIRALPIETT':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'GRANDADMIRALTHRAWN':     { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0 },
+    'DEATHTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'MOFFGIDEONTROOPER':      { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'EMPERORPALPATINE':       { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    'MARAJADE':               { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    // Profundity crew (LS Rogue One)
+    'ADMIRALRADDUS':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0 },
+    'JYNERSO':                { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'K2SO':                   { wantedSets: [1,1,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.5 },
+    'SCARIFPATHFINDER':       { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    // LS Jedi / Rebeldes
+    'COMMANDERAHSOKA':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'JEDIKNIGHTLUKE':         { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.7 },
+    'COMMANDERLUKESKYWALKER': { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'GRANDMASTERYODA':        { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    'AHSOKATANO':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'ANAKINKNIGHT':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'JEDIKNIGHTCAL':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'BOKATANMANDALORE':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    // FO / outros DS
+    'KYLORENUNMASKED':        { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'GENERALHUX':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'DARTHMALAK':             { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'DARTHNIHILUS':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    'BASTILASHANDARK':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
     // Padrao speed-focused
     'DEFAULT':            { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 }
   }

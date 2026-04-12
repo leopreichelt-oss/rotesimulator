@@ -1,31 +1,21 @@
 ROTE Planner — Melhorias Futuras
 =================================
-Gerado em: 2026-04-07
+Gerado em: 2026-04-07 / Atualizado em: 2026-04-08
 Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
 
 ================================================================================
 ALTA PRIORIDADE
 ================================================================================
 
-[1] Completar perfis de mods no modEngine
-    - Situação: modEngine.js cobre ~26 personagens com perfis específicos.
-      Todos os demais caem em "DEFAULT" (speed-focused), o que pode não ser ideal.
-    - Ação: mapear os personagens mais relevantes do ROTE (especialmente GLs,
-      Executor crew, Profundity crew) com wantedSets, wantedPrimaries e speedWeight corretos.
-    - Impacto: melhor precisão no modScore → multiplicadores mais fiéis.
-
-[2] Completar MISSION_SQUADS com IDs faltantes
-    - Situação: durante a construção do missionSquads.js alguns base_ids não
-      estavam confirmados e foram marcados como TODO:
-        * GL Ahsoka Tano: provável "GLAT" — confirmar no Comlink
-        * Jedi Master Mace Windu: provável "JMMW" — confirmar no Comlink
-        * Enoch (Inquisitor Leader): provável "ENOCH" — confirmar no Comlink
-        * Dark Trooper Purge: provável "DARKTROOPERPURGE" — confirmar no Comlink
-        * Night Trooper: provável "NIGHTTROOPER" — confirmar no Comlink
-    - Ação: usar /player no Comlink para qualquer conta que tenha essas unidades
-      e capturar o base_id correto do definitionId.
-    - Impacto: missões que dependem dessas unidades estão usando keyUnit fallback,
-      o que pode inflar ou deflacionar as contagens.
+[1] Completar perfis de mods no modEngine — CONCLUÍDO (2026-04-08)
+    - 26 perfis adicionados: GLs (SLK, SEE), Executor crew (VADER, ADMIRALPIETT,
+      GRANDADMIRALTHRAWN, DEATHTROOPER, MOFFGIDEONTROOPER, EMPERORPALPATINE, MARAJADE),
+      Profundity crew (ADMIRALRADDUS, JYNERSO, K2SO, SCARIFPATHFINDER), LS Jedi/Rebeldes
+      (COMMANDERAHSOKA, JEDIKNIGHTLUKE, COMMANDERLUKESKYWALKER, GRANDMASTERYODA,
+      AHSOKATANO, ANAKINKNIGHT, JEDIKNIGHTCAL, BOKATANMANDALORE), FO/DS
+      (KYLORENUNMASKED, GENERALHUX, DARTHMALAK, DARTHNIHILUS, BASTILASHANDARK).
+    - Total: ~52 perfis específicos (era ~26). Perfis com IDs ainda desconhecidos
+      (GL Ahsoka, JM Mace Windu) aguardam resolução do item 2.
 
 ================================================================================
 MÉDIA PRIORIDADE
@@ -48,14 +38,6 @@ MÉDIA PRIORIDADE
     - Ação: integrar dados históricos do roteHistory e o GP calculado por
       combatEngine para ranquear jogadores no painel lateral.
 
-[6] Peso ROTE no squadFarmEngine
-    - Situação: squadFarmEngine já calcula prioridade de farm para GAC/TW, mas
-      não considera se o esquadrão é usado em platoons ou missões do ROTE.
-    - Ação: adicionar campo "roteWeight" em squadMeta.js; incrementar quando o
-      esquadrão aparece em MISSION_SQUADS ou platoonRequirements. Usar esse peso
-      no score final de prioridade de farm.
-    - Impacto: squads críticos para ROTE sobem nas recomendações de farm.
-
 [7] Detalhe de platoon com jogadores disponíveis
     - Situação: a coluna de platoons mostra "X/6" disponíveis por slot, mas não
       lista quais jogadores têm cada unidade.
@@ -66,12 +48,6 @@ MÉDIA PRIORIDADE
 ================================================================================
 BAIXA PRIORIDADE
 ================================================================================
-
-[8] Análise de tendência no histórico
-    - Situação: roteHistory registra TB por TB, mas não há visualização de
-      tendência (melhora/piora de estrelas por fase ao longo do tempo).
-    - Ação: adicionar gráfico simples (barras ASCII ou SVG mínimo) no painel
-      de histórico mostrando estrelas por fase nas últimas 5 TBs.
 
 [9] Referência de velocidade mínima por personagem
     - Situação: modEngine avalia velocidade nos secundários, mas não compara
@@ -88,18 +64,6 @@ BAIXA PRIORIDADE
       eficiência máxima; adicionar flag "omicron" por unidade no rosterEngine
       e usar no multiplier.
 
-[11] Agendamento de auto-sync
-    - Situação: sync é manual. Guilds atualizam antes de cada TB mas às vezes
-      líderes esquecem.
-    - Ação: adicionar notificação "Roster desatualizado há X dias" quando a data
-      do último sync for anterior a 3 dias; opcionalmente permitir sync
-      automático via cron no Service Worker.
-
-[12] Exportação de briefing para clipboard/Discord
-    - Situação: o briefing para oficiais gera texto, mas formatação para Discord
-      (negrito com **, blocos com ```) não está implementada.
-    - Ação: adicionar botão "Copiar para Discord" que formata o briefing com
-      markdown do Discord (negrito, campos inline, separadores ---).
 
 [13] Mapeamento de abreviações de jogadores
     - Situação: nomes de jogadores no roster podem ter caracteres especiais ou

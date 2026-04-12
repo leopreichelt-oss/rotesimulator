@@ -22,6 +22,55 @@
 
 var squadFarmEngine = {
 
+  // Cache do roteWeight por squadId (calculado uma vez por sessão)
+  _roteWeightCache: null,
+
+  // Varre MISSION_SQUADS e platoonRequirements para descobrir quais unitIds
+  // aparecem como requisito real de missão ou platoon no ROTE.
+  // Retorna um Set de unitIds relevantes para ROTE.
+  _buildRoteUnitSet: function() {
+    var units = {}
+
+    // Missões: cada unitId dentro de require[] conta como presença em missão
+    if (typeof MISSION_SQUADS !== 'undefined') {
+      Object.values(MISSION_SQUADS).forEach(function(planet) {
+        Object.values(planet).forEach(function(missionComps) {
+          if (!Array.isArray(missionComps)) return
+          missionComps.forEach(function(comp) {
+            if (comp.require) comp.require.forEach(function(uid) { units[uid] = (units[uid] || 0) + 1 })
+          })
+        })
+      })
+    }
+
+    // Platoons: cada slot unitId conta como presença em platoon
+    if (typeof platoonRequirements !== 'undefined') {
+      Object.values(platoonRequirements).forEach(function(phase) {
+        Object.values(phase).forEach(function(ops) {
+          if (!Array.isArray(ops)) return
+          ops.forEach(function(slot) { if (slot.unitId) units[slot.unitId] = (units[slot.unitId] || 0) + 1 })
+        })
+      })
+    }
+
+    return units
+  },
+
+  // Para um squad, retorna um peso ROTE entre 0 e 1 (fração de membros presentes
+  // em MISSION_SQUADS ou platoonRequirements, ponderada pela frequência de aparição).
+  _roteWeight: function(squad) {
+    if (!squadFarmEngine._roteWeightCache) {
+      squadFarmEngine._roteWeightCache = squadFarmEngine._buildRoteUnitSet()
+    }
+    var unitFreq = squadFarmEngine._roteWeightCache
+    if (!squad.members || squad.members.length === 0) return 0
+
+    var totalFreq = 0
+    squad.members.forEach(function(uid) { totalFreq += Math.min(unitFreq[uid] || 0, 10) })
+    // Normaliza: máximo teórico = 10 aparições por membro
+    return totalFreq / (squad.members.length * 10)
+  },
+
   // Ordem das ligas do mais fraco ao mais forte
   LEAGUE_ORDER: ['CARBONITE', 'BRONZIUM', 'CHROMIUM', 'AURODIUM', 'KYBER'],
 
@@ -159,8 +208,12 @@ var squadFarmEngine = {
     // Fator de liga: squads de ligas mais altas têm peso para jogadores que já estão lá
     var leagueMatch = squadLeagueIdx <= leagueIdx ? 1.2 : 1.0
 
-    // Score base: cobertura (principal) + multi-evento + liga
-    var baseScore = (coverage * 5) + (eventsCount * 0.5) + leagueMatch
+    // Fator ROTE: bônus para squads com membros presentes em missões/platoons do ROTE
+    // Escala: 0 (sem presença) → 1.5 (todos os membros aparecem frequentemente)
+    var roteBonus = squadFarmEngine._roteWeight(squad) * 1.5
+
+    // Score base: cobertura (principal) + multi-evento + liga + ROTE
+    var baseScore = (coverage * 5) + (eventsCount * 0.5) + leagueMatch + roteBonus
 
     // Penalidade se jornada ainda pendente (maior custo total)
     var score = journeyPending ? baseScore * 0.7 : baseScore

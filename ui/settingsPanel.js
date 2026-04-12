@@ -299,6 +299,18 @@ function renderActivityList() {
   '</div>'
 }
 
+// Verifica se o roster está desatualizado (>24h) e dispara sync automático
+function checkAutoSync() {
+  var allycode = settingsState.allycode
+  if (!allycode) return
+
+  var lastSync = (typeof rosterEngine !== 'undefined') ? rosterEngine.lastSyncDate() : null
+  if (!lastSync) return  // nunca sincronizou — aguarda ação manual
+
+  var hoursAgo = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60)
+  if (hoursAgo >= 24) syncGuild()
+}
+
 // Sincroniza guilda e roster
 function syncGuild() {
   if (settingsState.syncing) return

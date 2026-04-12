@@ -5,6 +5,7 @@ window.onload = function(){
   if (typeof applySimMode === 'function') applySimMode()
   // Restaurar lista de inativos/margem do localStorage (sem precisar resincronizar)
   if (typeof _loadActivityStatusFromStorage === 'function') _loadActivityStatusFromStorage()
+  if (typeof checkAutoSync === 'function') checkAutoSync()
   calculate()
   drawROTEHistory()
   updateGPProjectionDisplay()

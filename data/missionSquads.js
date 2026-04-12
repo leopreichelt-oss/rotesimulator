@@ -30,10 +30,11 @@
  *   Wat=WATTAMBOR, Nute=NUTEGUNRAY, Dooku=COUNTDOOKU, Trench=TRENCH,
  *   Cass=CASSIANANDORS1, BAM=MANDALORIANBESKAR, BKM=BOKATANMANDALORE,
  *   Nego=CAPITALNEGOTIATOR, Prof=CAPITALPROFUNDITY, Exec=CAPITALEXECUTOR,
- *   Lev=CAPITALLEVIATHAN, Chim=CAPITALCHIMAERA, Mal=CAPITALMALEVOLENCE
+ *   Lev=CAPITALLEVIATHAN, Chim=CAPITALCHIMAERA, Mal=CAPITALMALEVOLENCE,
+ *   GLAT=GLAHSOKATANO, JMMW=JEDIMASTERMACEWINDU, Enoch=CAPTAINENOCH,
+ *   NT=NIGHTTROOPER, DTP=DEATHTROOPERPERIDEA
  *
- * IDs omitidos por falta de confirmação: GLAT (GL Ahsoka), JMMW (JM Mace Windu),
- *   Depa (Depa Billaba), TG, JN, Enoch, DTP, NT, Bolo, RHF, RHP
+ * IDs ainda sem confirmação: Depa (Depa Billaba), TG, JN, Bolo, RHF, RHP
  */
 
 var MISSION_SQUADS = {
@@ -504,9 +505,11 @@ var MISSION_SQUADS = {
   // 0 elegíveis no JSON — usando inelegíveis como composições válidas
   // ══════════════════════════════════════════════════════════════════════
   "Kafrene": {
-    1: [
-      // JMMW squad omitido (ID não confirmado)
-    ],
+    // M1 JMMW — composições pendentes
+    // TODO(futuro): Kafrene T5 só é relevante para guildas com GP total >650M.
+    // Poucas guildas chegam aqui; mapear composições reais quando necessário via
+    // tb_combat_eligibility_all_planets.json ou conta com JEDIMASTERMACEWINDU.
+    1: [],
     2: [
       { require: ['JEDIMASTERKENOBI'] },
     ],
@@ -516,9 +519,8 @@ var MISSION_SQUADS = {
       { require: ['CAPITALPROFUNDITY'], isShip: true },
       { require: ['CAPITALNEGOTIATOR'], isShip: true },
     ],
-    5: [
-      // JMMW squad omitido (ID não confirmado)
-    ],
+    // M5 JMMW — composições pendentes (ver M1)
+    5: [],
   },
 
   // ══════════════════════════════════════════════════════════════════════
