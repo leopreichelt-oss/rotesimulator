@@ -405,6 +405,10 @@ function syncGuild() {
           if (typeof combatEngine !== 'undefined') {
             combatEngine.computeAndStore(rosterMap)
           }
+          // Gerar lista de alocação de platoons
+          if (typeof platoonAllocEngine !== 'undefined') {
+            platoonAllocEngine.computeAndStore(rosterMap)
+          }
 
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
           setTimeout(function() {

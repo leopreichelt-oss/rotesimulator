@@ -390,10 +390,19 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
   var impossible = results.filter(function(r) { return r.status === 'impossible' })
   var prealoca   = results.filter(function(r) { return r.status === 'prealoca' })
 
+  // Botão de alocação (sempre visível quando há roster)
+  var allocBtnHtml = ''
+  if (typeof platoonAllocEngine !== 'undefined') {
+    var escapedPlanets = planets.map(function(p) { return p.replace(/'/g, "\\'") })
+    allocBtnHtml = '<button onclick="showPlatoonAllocModal([' + escapedPlanets.map(function(p) { return '\'' + p + '\'' }).join(',') + '])"'
+      + ' style="float:right;font-size:10px;background:#1e40af;color:#93c5fd;border:none;border-radius:3px;'
+      + 'cursor:pointer;padding:2px 6px;margin-top:-2px;" title="Ver alocação de platoons">👥 Alocar</button>'
+  }
+
   // Tudo ok
   if (missing.length === 0 && impossible.length === 0 && prealoca.length === 0) {
     div.style.borderLeft = "3px solid #4ade80"
-    div.innerHTML = header + '<div style="color:#4ade80;">✅ Platoons completos em 1 fase</div>'
+    div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + '<div style="color:#4ade80;">✅ Platoons completos em 1 fase</div>'
     return
   }
 
@@ -412,7 +421,7 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
         + '</div>'
     })
     lista += '</div>'
-    div.innerHTML = header + statusLine + lista
+    div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + statusLine + lista
     return
   }
 
@@ -468,7 +477,164 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
       + btnLabel + '</button></div>'
   }
 
-  div.innerHTML = header + resumo + lista + btnHtml
+  div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + resumo + lista + btnHtml
+}
+
+// =====================================================
+// MODAL DE ALOCAÇÃO DE PLATOONS
+// =====================================================
+function showPlatoonAllocModal(planets) {
+  if (typeof platoonAllocEngine === 'undefined') return
+
+  var rosterMap = (typeof rosterEngine !== 'undefined') ? rosterEngine.loadActive() : null
+  if (!rosterMap || Object.keys(rosterMap).length === 0) {
+    alert('Sincronize o roster primeiro.')
+    return
+  }
+
+  // Recalcular alocação em tempo real
+  var alloc = platoonAllocEngine.buildAllocation(rosterMap)
+
+  // Remover modal anterior
+  var old = document.getElementById('platoonAllocModal')
+  if (old) old.remove()
+
+  var overlay = document.createElement('div')
+  overlay.id = 'platoonAllocModal'
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;'
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove() }
+
+  var box = document.createElement('div')
+  box.style.cssText = 'background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;width:580px;max-width:96vw;max-height:85vh;display:flex;flex-direction:column;gap:8px;'
+
+  // Cabeçalho
+  var titleRow = document.createElement('div')
+  titleRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;'
+  var phase = (state.planets[planets[0]] || {}).phase || '?'
+  titleRow.innerHTML = '<span style="color:#e2e8f0;font-weight:bold;font-size:13px;">👥 Alocação de Platoons — F' + phase + ': ' + planets.join(' + ') + '</span>'
+  var closeBtn = document.createElement('button')
+  closeBtn.textContent = '✕'
+  closeBtn.style.cssText = 'background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;line-height:1;'
+  closeBtn.onclick = function() { overlay.remove() }
+  titleRow.appendChild(closeBtn)
+  box.appendChild(titleRow)
+
+  var legend = document.createElement('div')
+  legend.style.cssText = 'font-size:10px;color:#64748b;border-top:1px solid #1e293b;padding-top:6px;'
+  legend.textContent = 'Exibindo apenas slots com ≤' + platoonAllocEngine.SURPLUS_THRESHOLD + ' unidades de sobra. Critério: relic mínimo do tier → menor GP do personagem específico.'
+  box.appendChild(legend)
+
+  var body = document.createElement('div')
+  body.style.cssText = 'overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;'
+
+  var hasTight = false
+
+  planets.forEach(function(planetName) {
+    var planetAlloc = alloc[planetName]
+    if (!planetAlloc) return
+
+    var platoonKey = (typeof PLANET_PLATOON_KEY !== 'undefined') ? PLANET_PLATOON_KEY[planetName] : null
+    var requirements = platoonKey ? platoonRequirements[platoonKey] : null
+    if (!requirements) return
+
+    var tier = (typeof getPlanetTier === 'function') ? getPlanetTier(planetName) : 1
+    var relicMin = (typeof TIER_RELIC !== 'undefined') ? TIER_RELIC[tier] || 5 : 5
+
+    // Coletar slots tight de todas as ops
+    var tightByOp = {}
+    Object.keys(planetAlloc).forEach(function(opStr) {
+      var op = Number(opStr)
+      var tightSlots = planetAlloc[opStr].filter(function(s) { return s.isTight })
+      if (tightSlots.length > 0) tightByOp[op] = tightSlots
+    })
+
+    if (Object.keys(tightByOp).length === 0) return
+    hasTight = true
+
+    var pSection = document.createElement('div')
+    pSection.innerHTML = '<div style="color:#60a5fa;font-weight:bold;font-size:12px;margin-bottom:4px;">'
+      + planetName + ' <span style="color:#475569;font-weight:normal;font-size:10px;">(R' + relicMin + '+)</span></div>'
+
+    Object.keys(tightByOp).sort(function(a,b){return a-b}).forEach(function(opStr) {
+      var slots = tightByOp[opStr]
+      var opDiv = document.createElement('div')
+      opDiv.style.cssText = 'background:#1e293b;border-radius:6px;padding:8px;margin-bottom:6px;'
+
+      // Agrupar por unitId (um mesmo unitId pode ter múltiplos slots na op)
+      var byUnit = {}
+      slots.forEach(function(s) {
+        if (!byUnit[s.unitId]) byUnit[s.unitId] = []
+        byUnit[s.unitId].push(s)
+      })
+
+      var opHtml = '<div style="color:#94a3b8;font-size:10px;margin-bottom:4px;font-weight:bold;">Operação ' + opStr + '</div>'
+
+      Object.keys(byUnit).forEach(function(unitId) {
+        var unitSlots = byUnit[unitId]
+        var s0 = unitSlots[0]
+        var uname = (typeof getUnitName === 'function') ? getUnitName(unitId) : unitId
+        var surplusLabel = s0.surplus < 0 ? '<span style="color:#f87171;">faltam ' + Math.abs(s0.surplus) + '</span>'
+          : s0.surplus === 0 ? '<span style="color:#f97316;">exato</span>'
+          : '<span style="color:#fbbf24;">+' + s0.surplus + ' sobra</span>'
+
+        opHtml += '<div style="margin-bottom:6px;padding:6px;background:#0f172a;border-radius:4px;border-left:3px solid ' + (s0.surplus <= 0 ? '#f87171' : s0.surplus <= 1 ? '#f97316' : '#fbbf24') + ';">'
+        opHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+        opHtml += '<span style="color:#e2e8f0;font-size:11px;font-weight:bold;">' + uname + '</span>'
+        opHtml += '<span style="font-size:10px;">' + surplusLabel + '</span>'
+        opHtml += '</div>'
+
+        unitSlots.forEach(function(s) {
+          if (!s.playerId) {
+            opHtml += '<div style="color:#f87171;font-size:10px;padding-left:6px;">❌ Sem candidato disponível</div>'
+            return
+          }
+          var relicLabel = 'R' + s.relic
+          var gpLabel = ''
+          // Buscar GP da unidade do jogador
+          var playerObj = Object.values(rosterMap).find(function(p) { return (p.playerId || p.name) === s.playerId })
+          if (playerObj) {
+            var unit = playerObj.units ? playerObj.units.find(function(u) { return u.base_id === unitId }) : null
+            if (unit && unit.gp) gpLabel = ' · ' + Math.round(unit.gp / 1000) + 'k GP'
+          }
+
+          var conflictHtml = ''
+          if (s.conflict && s.conflict.missions.length > 0) {
+            var mStr = s.conflict.missions.map(function(m) { return 'M' + m }).join(', ')
+            conflictHtml = '<div style="color:#fb923c;font-size:10px;margin-top:2px;padding-left:6px;">'
+              + '⚔ Conflito: usado em batalha (' + mStr + ')'
+            if (s.conflict.alternatives.length > 0) {
+              conflictHtml += '<br><span style="color:#86efac;">Alt: ' + s.conflict.alternatives.slice(0,2).join(' | ') + '</span>'
+            } else {
+              conflictHtml += '<br><span style="color:#94a3b8;">Sem esquadrão alternativo disponível</span>'
+            }
+            conflictHtml += '</div>'
+          }
+
+          opHtml += '<div style="color:#cbd5e1;font-size:10px;padding-left:6px;">'
+            + '→ ' + s.playerName + ' <span style="color:#64748b;">' + relicLabel + gpLabel + '</span>'
+            + conflictHtml + '</div>'
+        })
+
+        opHtml += '</div>'
+      })
+
+      opDiv.innerHTML = opHtml
+      pSection.appendChild(opDiv)
+    })
+
+    body.appendChild(pSection)
+  })
+
+  if (!hasTight) {
+    var noTight = document.createElement('div')
+    noTight.style.cssText = 'color:#4ade80;font-size:12px;padding:12px;text-align:center;'
+    noTight.textContent = '✅ Todos os personagens têm sobra suficiente — nenhum slot crítico.'
+    body.appendChild(noTight)
+  }
+
+  box.appendChild(body)
+  overlay.appendChild(box)
+  document.body.appendChild(overlay)
 }
 
 // =====================================================

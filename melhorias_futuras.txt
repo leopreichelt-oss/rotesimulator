@@ -17,20 +17,10 @@ MÉDIA PRIORIDADE
     - Ação: integrar dados históricos do roteHistory e o GP calculado por
       combatEngine para ranquear jogadores no painel lateral.
 
-[7] Detalhe de platoon com jogadores disponíveis
-    - Situação: a coluna de platoons mostra "X/6" disponíveis por slot, mas não
-      lista quais jogadores têm cada unidade.
-    - Ação: ao clicar em um slot de platoon, abrir um mini-painel (similar ao
-      battleMap) com os personagems q estão com sobra 0 até +3 com a lista
-      de jogadores que têm a unidade no nível mínimo,ordenados por relíquia
-      e modScore. dando preferencia para os personagens elegiveis com o pior desempenho
-      pro platoon.  gerar uma lista de alocação interna q será utilizada futuramente em um
-      sistema de platoon automático q será desenvolvido futuramente.
-
 ================================================================================
 NOTAS TÉCNICAS
 ================================================================================
 
 - Comlink URL atual: https://worker-lively-heart-f0a0.leopreichelt.workers.dev
-- Armazenamento local: rote_roster_v3, rote_activity_v1, rote_guild_gp_v1
+- Armazenamento local: rote_roster_v3, rote_activity_v1, rote_guild_gp_v1, rote_platoon_alloc_v1
 - GitHub: https://github.com/leopreichelt-oss/rotesimulator (branch main)
