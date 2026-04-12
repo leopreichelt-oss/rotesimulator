@@ -380,7 +380,18 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
 
   var specialBanner = _specialMissionBanner(planets)
 
+  // Botão de alocação — montado antes do header para float:right funcionar
+  var allocBtnHtml = ''
+  if (typeof platoonAllocEngine !== 'undefined') {
+    var escapedPlanets = planets.map(function(p) { return p.replace(/'/g, "\\'") })
+    allocBtnHtml = '<button onclick="showPlatoonAllocModal([' + escapedPlanets.map(function(p) { return '\'' + p + '\'' }).join(',') + '])"'
+      + ' style="float:right;font-size:10px;background:#1e40af;color:#93c5fd;border:none;border-radius:3px;'
+      + 'cursor:pointer;padding:2px 6px;" title="Ver alocação de platoons">👥 Alocar</button>'
+  }
+
+  // float:right precisa aparecer ANTES do texto no HTML
   var header = '<div style="font-weight:bold;color:#4da6ff;margin-bottom:4px;">'
+    + allocBtnHtml
     + 'F' + phase + ': ' + planets.join(' + ')
     + ' <span style="color:#94a3b8;font-weight:normal;">(R' + maxRelicMin + '+)</span>'
     + fasesInfo + '</div>'
@@ -390,19 +401,10 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
   var impossible = results.filter(function(r) { return r.status === 'impossible' })
   var prealoca   = results.filter(function(r) { return r.status === 'prealoca' })
 
-  // Botão de alocação (sempre visível quando há roster)
-  var allocBtnHtml = ''
-  if (typeof platoonAllocEngine !== 'undefined') {
-    var escapedPlanets = planets.map(function(p) { return p.replace(/'/g, "\\'") })
-    allocBtnHtml = '<button onclick="showPlatoonAllocModal([' + escapedPlanets.map(function(p) { return '\'' + p + '\'' }).join(',') + '])"'
-      + ' style="float:right;font-size:10px;background:#1e40af;color:#93c5fd;border:none;border-radius:3px;'
-      + 'cursor:pointer;padding:2px 6px;margin-top:-2px;" title="Ver alocação de platoons">👥 Alocar</button>'
-  }
-
   // Tudo ok
   if (missing.length === 0 && impossible.length === 0 && prealoca.length === 0) {
     div.style.borderLeft = "3px solid #4ade80"
-    div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + '<div style="color:#4ade80;">✅ Platoons completos em 1 fase</div>'
+    div.innerHTML = header + '<div style="color:#4ade80;">✅ Platoons completos em 1 fase</div>'
     return
   }
 
@@ -421,7 +423,7 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
         + '</div>'
     })
     lista += '</div>'
-    div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + statusLine + lista
+    div.innerHTML = header + statusLine + lista
     return
   }
 
@@ -477,7 +479,7 @@ function _renderPhaseGroup(div, phase, planets, analysis) {
       + btnLabel + '</button></div>'
   }
 
-  div.innerHTML = header.replace('</div>', allocBtnHtml + '</div>') + resumo + lista + btnHtml
+  div.innerHTML = header + resumo + lista + btnHtml
 }
 
 // =====================================================
