@@ -64,75 +64,81 @@ var modEngine = (function () {
   // wantedPrimaries  : { shape -> statId } primario esperado por slot
   // wantedSecondaries: [statIds] que pontuam positivamente
   // speedWeight      : 0-1 (quanto speed importa vs outros stats)
+  // minSpeedMods     : speed mínimo esperado APENAS dos mods secundários
+  //                    (não inclui base do personagem). Ausente = sem verificação.
+  //                    Referência: speed total alvo menos base aprox. do char.
+  //                    Ex: JMK alvo 340 total, base ~175 → minSpeedMods: 140
+  // minSpeedMods: calculado a partir do speed real de mods do jogador #1 GP (allycode 666716133)
+  // Fórmula: speedWeight 1.0 → 75% do real; 0.8–0.9 → 70%; 0.7 → 65%; ≤0.6 → sem mínimo
   var CHARACTER_PROFILES = {
     // GL / topo
-    'GLREY':              { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'GRANDMASTERLUKE':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'LORDVADER':          { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.9 },
-    'JABBATHEHUTT':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'JEDIMASTERKENOBI':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'GLREY':              { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods: 130 }, // real:150 → 112, mantém 130 (padrão comunidade)
+    'GRANDMASTERLUKE':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 120 }, // real:137 → 103, mantém 120
+    'LORDVADER':          { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.9, minSpeedMods:  95 }, // real:131 → 92
+    'JABBATHEHUTT':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  85 }, // real:117 → 88
+    'JEDIMASTERKENOBI':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 140 }, // real:132 → 99, mantém 140
     // DS
-    'DARTHMALGUS':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'DARTHREVAN':         { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'GRANDINQUISITOR':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'DOCTORAPHRA':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'GEONOSIANBROODALPHA':{ wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'MERRIN':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'MALAK':              { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'DARTHMALGUS':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods: 105 }, // real:141 → 106
+    'DARTHREVAN':         { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  95 }, // real:128 → 96
+    'GRANDINQUISITOR':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  90 }, // real:121 → 91
+    'DOCTORAPHRA':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  85 }, // real:117 → 88
+    'GEONOSIANBROODALPHA':{ wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  75 }, // real:110 → 77
+    'MERRIN':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  60 }, // real:80 → 60 (mods não-speed nesse roster)
+    'MALAK':              { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  70 }, // real:~105 → 74
     // LS
-    'GENERALSKYWALKER':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'PADMEAMIDALA':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'GENERALKENOBI':      { wantedSets: [1,1,4], wantedPrimaries: { 2:5, 3:49, 4:55, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.6 },
-    'BOKATAN':            { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'CASSIANANDORS1':     { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'HUNTER':             { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'HERMITYODA':         { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.7 },
-    'CT7567':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'CALKESTIS':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'JEDIKNIGHTREVAN':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'GENERALSKYWALKER':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 100 }, // real:134 → 100
+    'PADMEAMIDALA':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 100 }, // real:133 → 100
+    'GENERALKENOBI':      { wantedSets: [1,1,4], wantedPrimaries: { 2:5, 3:49, 4:55, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.6 },                    // tank — sem mínimo
+    'BOKATAN':            { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 100 }, // real:135 → 101
+    'CASSIANANDORS1':     { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  70 }, // real:95 → 71
+    'HUNTER':             { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  80 }, // real:120 → 84
+    'HERMITYODA':         { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.7, minSpeedMods:  65 }, // real:106 → 69
+    'CT7567':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  95 }, // real:125 → 94
+    'CALKESTIS':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },                    // sem mín — mods não-speed nesse roster (43 real)
+    'JEDIKNIGHTREVAN':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  90 }, // real:122 → 92
     // Suporte / tank
-    'BASTILASHAN':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'DARTHSION':          { wantedSets: [1,3,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.7 },
-    'DARTHTRAYA':         { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
+    'BASTILASHAN':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  80 }, // real:108 → 81
+    'DARTHSION':          { wantedSets: [1,3,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.7, minSpeedMods:  65 }, // real:109 → 71
+    'DARTHTRAYA':         { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  70 }, // real:96 → 72
     // GL / topo (adicionais)
-    'SUPREMELEADERKYLOREN':   { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.9 },
-    'SITHETERNALPALPATINE':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'GLAHSOKATANO':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'JEDIMASTERMACEWINDU':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'SUPREMELEADERKYLOREN':   { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.9, minSpeedMods:  95 }, // real:137 → 96
+    'SITHETERNALPALPATINE':   { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  80 }, // estimativa ~110 → 83
+    'GLAHSOKATANO':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 120 }, // real:126 → 95, mantém 120
+    'JEDIMASTERMACEWINDU':    { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 120 }, // real:156 → 117, mantém 120
     // Imperial Remnant (Peridea)
-    'CAPTAINENOCH':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'NIGHTTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'DEATHTROOPERPERIDEA':    { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'CAPTAINENOCH':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  95 }, // real:130 → 98
+    'NIGHTTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  90 }, // real:129 → 90
+    'DEATHTROOPERPERIDEA':    { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  80 }, // real:119 → 83
     // Executor crew (DS Imperio)
-    'VADER':                  { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'ADMIRALPIETT':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'GRANDADMIRALTHRAWN':     { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0 },
-    'DEATHTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'MOFFGIDEONTROOPER':      { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'EMPERORPALPATINE':       { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'MARAJADE':               { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'VADER':                  { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  95 }, // real:136 → 95
+    'ADMIRALPIETT':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  95 }, // real:125 → 94
+    'GRANDADMIRALTHRAWN':     { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0, minSpeedMods: 120 }, // real:132 → 99, mantém 120
+    'DEATHTROOPER':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  65 }, // real:99 → 69
+    'MOFFGIDEONTROOPER':      { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  90 }, // ref MOFFGIDEONS3:122 → 92
+    'EMPERORPALPATINE':       { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  70 }, // real:98 → 74
+    'MARAJADE':               { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  85 }, // real:127 → 89
     // Profundity crew (LS Rogue One)
-    'ADMIRALRADDUS':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0 },
-    'JYNERSO':                { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'K2SO':                   { wantedSets: [1,1,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.5 },
-    'SCARIFPATHFINDER':       { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
+    'ADMIRALRADDUS':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,49],  speedWeight: 1.0, minSpeedMods:  80 }, // real:107 → 80
+    'JYNERSO':                { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:55, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  85 }, // real:113 → 85
+    'K2SO':                   { wantedSets: [1,1,4], wantedPrimaries: { 2:5, 3:49, 4:28, 5:28, 6:1  }, wantedSecondaries: [5,28,1,49],   speedWeight: 0.5 },                    // tank — sem mínimo
+    'SCARIFPATHFINDER':       { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  70 }, // estimativa ~105 → 74
     // LS Jedi / Rebeldes
-    'COMMANDERAHSOKA':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'JEDIKNIGHTLUKE':         { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.7 },
-    'COMMANDERLUKESKYWALKER': { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'GRANDMASTERYODA':        { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'AHSOKATANO':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'ANAKINKNIGHT':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'JEDIKNIGHTCAL':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'BOKATANMANDALORE':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
+    'COMMANDERAHSOKA':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods: 135 }, // real:140 → 105, mantém 135
+    'JEDIKNIGHTLUKE':         { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.7, minSpeedMods:  70 }, // real:115 → 75
+    'COMMANDERLUKESKYWALKER': { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  90 }, // real:130 → 91
+    'GRANDMASTERYODA':        { wantedSets: [4,4,7], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  95 }, // real:127 → 95
+    'AHSOKATANO':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  85 }, // real:116 → 87
+    'ANAKINKNIGHT':           { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  75 }, // real:111 → 78
+    'JEDIKNIGHTCAL':          { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:49, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  70 }, // real:98 → 74
+    'BOKATANMANDALORE':       { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  80 }, // estimativa ~110 → 83
     // FO / outros DS
-    'KYLORENUNMASKED':        { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'GENERALHUX':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 },
-    'DARTHMALAK':             { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8 },
-    'DARTHNIHILUS':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    'BASTILASHANDARK':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0 },
-    // Padrao speed-focused
-    'DEFAULT':            { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0 }
+    'KYLORENUNMASKED':        { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  85 }, // real:125 → 88
+    'GENERALHUX':             { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  75 }, // real:102 → 77
+    'DARTHMALAK':             { wantedSets: [6,6,2], wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 0.8, minSpeedMods:  70 }, // real:105 → 74
+    'DARTHNIHILUS':           { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  75 }, // real:104 → 78
+    'BASTILASHANDARK':        { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,48],  speedWeight: 1.0, minSpeedMods:  90 }, // real:122 → 92
+    // Padrão speed-focused
+    'DEFAULT':                { wantedSets: [4,4],   wantedPrimaries: { 2:5, 3:48, 4:56, 5:53, 6:55 }, wantedSecondaries: [5,41,42,53],  speedWeight: 1.0, minSpeedMods:  70 }
   }
 
   // -- Decodificacao do definitionId ----------------------------------------
@@ -222,11 +228,23 @@ var modEngine = (function () {
 
     var total = Math.min(100, Math.round(tierScore + levelScore + setScore + primaryScore + speedScore + secScore))
 
+    // 7. Penalidade de speed mínimo
+    // Se o personagem tem minSpeedMods e o speed dos mods está abaixo, reduz o score.
+    // A penalidade é proporcional ao gap: até -15 pts quando speed = 0.
+    var speedWarning = false
+    if (profile.minSpeedMods && speedTotal < profile.minSpeedMods) {
+      speedWarning = true
+      var gap = profile.minSpeedMods - speedTotal
+      var penalty = Math.round(Math.min(15, gap * 0.5))
+      total = Math.max(0, total - penalty)
+    }
+
     var label = total >= 85 ? 'Excelente' : total >= 70 ? 'Bom' : total >= 55 ? 'Regular'
               : total >= 40 ? 'Fraco' : 'Ruim'
 
     return {
-      score: total, label: label, speedBonus: speedTotal,
+      score: total, label: label, speedBonus: speedTotal, speedWarning: speedWarning,
+      speedMin: profile.minSpeedMods || null,
       details: {
         tier:        Math.round(tierScore),
         level:       Math.round(levelScore),
@@ -239,11 +257,12 @@ var modEngine = (function () {
   }
 
   // -- Resumo para tooltip / briefing ---------------------------------------
-  // Ex: "73 Bom (+18 spd)" ou "Sem mods"
+  // Ex: "73 Bom (+18 spd)" ou "73 Bom (+18 spd ⚠spd<140)"
   function modSummary (mods, baseId) {
     if (!mods || mods.length === 0) return 'Sem mods'
     var r = scoreMods(mods, baseId)
-    return r.score + ' ' + r.label + ' (+' + r.speedBonus + ' spd)'
+    var warn = r.speedWarning ? ' ⚠spd<' + r.speedMin : ''
+    return r.score + ' ' + r.label + ' (+' + r.speedBonus + ' spd' + warn + ')'
   }
 
   // -- API publica ----------------------------------------------------------

@@ -14,8 +14,7 @@ ALTA PRIORIDADE
       (COMMANDERAHSOKA, JEDIKNIGHTLUKE, COMMANDERLUKESKYWALKER, GRANDMASTERYODA,
       AHSOKATANO, ANAKINKNIGHT, JEDIKNIGHTCAL, BOKATANMANDALORE), FO/DS
       (KYLORENUNMASKED, GENERALHUX, DARTHMALAK, DARTHNIHILUS, BASTILASHANDARK).
-    - Total: ~52 perfis específicos (era ~26). Perfis com IDs ainda desconhecidos
-      (GL Ahsoka, JM Mace Windu) aguardam resolução do item 2.
+    - Total: ~52 perfis específicos (era ~26).
 
 ================================================================================
 MÉDIA PRIORIDADE
@@ -48,14 +47,6 @@ MÉDIA PRIORIDADE
 ================================================================================
 BAIXA PRIORIDADE
 ================================================================================
-
-[9] Referência de velocidade mínima por personagem
-    - Situação: modEngine avalia velocidade nos secundários, mas não compara
-      com o "speed mínimo recomendado" para o personagem (ex: Rey precisa ≥300,
-      GAS precisa ≥250).
-    - Ação: adicionar campo "minSpeed" em CHARACTER_PROFILES; quando o total de
-      speed base+mods ficar abaixo, penalizar o score e adicionar aviso visual
-      no briefing.
 
 [10] Validação de omicrons
     - Situação: algumas habilidades de platoon são omicron-dependentes (ex:
