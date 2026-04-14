@@ -993,10 +993,6 @@ function _showSquadFarmModal() {
         }).join(', '))
       }
 
-      // Omicron pendente: squad completo mas falta omicron em algum membro
-      if (r.omicronMissing && r.omicronMissing.length > 0) {
-        lines.push('  🔺 Squad pronto — omicron pendente: ' + r.omicronMissing.join(', '))
-      }
       if (r.squad.note) lines.push('  Obs: ' + r.squad.note)
       lines.push('')
     })

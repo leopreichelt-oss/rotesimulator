@@ -310,13 +310,8 @@ var squadFarmEngine = {
         }
       })
 
-      // Omicrons pendentes: sinaliza quando squad está completo e tem omicronUnits
-      var omicronMissing = null
-      if (membersNeeded.length === 0 && best.omicronUnits && best.omicronUnits.length > 0) {
-        omicronMissing = best.omicronUnits.map(function(uid) {
-          return (typeof getUnitName === 'function') ? getUnitName(uid) : uid
-        })
-      }
+      // Squad completo: nada a farmar — não incluir na lista
+      if (membersNeeded.length === 0) return
 
       results.push({
         player:         player,
@@ -324,8 +319,7 @@ var squadFarmEngine = {
         have:           cov.have,
         total:          cov.total,
         membersNeeded:  membersNeeded,
-        journeyPending: journeyPending,  // null = jornada concluída/sem jornada
-        omicronMissing: omicronMissing,  // null = sem omicron pendente ou squad incompleto
+        journeyPending: journeyPending,
         leagueId:       gac.leagueId,
         divisionId:     gac.divisionId,
         skillRating:    gac.skillRating
