@@ -121,6 +121,10 @@ oninput="updateROTEResult(${phase}, this.value);">
 Roteiro
 </button>
 
+<button onclick="openPlatoonOrdersModal(${phase})" title="Gerar ordens de platoon por jogador para esta fase">
+📋 Ordens
+</button>
+
 <span class="phaseToggle"
 onclick="togglePhaseDetails(${phase}, this)">
 ▸ detalhes técnicos

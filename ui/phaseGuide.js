@@ -1,3 +1,37 @@
+// Calcula o status de platoon antecipado para os planetas da próxima fase.
+// Retorna { planetName: "nao_fazer" | "preencher_nao_completar" | "completar" }
+function computeEarlyPlatoonStatus(phase) {
+  var phaseData = state.phases?.[phase] || {}
+  var nextPlanets = getPlanetsOfPhase(phase + 1)
+
+  var carryMaxSemEarly = (phaseData.carryMax || 0)
+    - (phaseData.earlyBattles || 0)
+    - (phaseData.earlyPlatoons || 0)
+
+  var carryPorPlaneta = nextPlanets.length > 0
+    ? carryMaxSemEarly / nextPlanets.length
+    : carryMaxSemEarly
+
+  var earlyPlatoonStatus = {}
+  nextPlanets.forEach(function(p) {
+    var star1 = planetData[p]?.stars?.one || 0
+    var carryComPlatoon = carryPorPlaneta + (phaseData.earlyPlatoons || 0)
+    var carrySemPlatoon = carryPorPlaneta
+
+    if (carryComPlatoon >= star1) {
+      if (carrySemPlatoon >= star1) {
+        earlyPlatoonStatus[p] = "nao_fazer"
+      } else {
+        earlyPlatoonStatus[p] = "preencher_nao_completar"
+      }
+    } else {
+      earlyPlatoonStatus[p] = "completar"
+    }
+  })
+
+  return earlyPlatoonStatus
+}
+
 function generatePhaseGuide(phase){
 
 let text = "⚔ TB ROTE — FASE " + phase + "\n"
@@ -59,24 +93,7 @@ let carryPorPlaneta = nextPlanets.length > 0
   : carryMaxSemEarly
 
 // determinar situação de early platoon por planeta
-let earlyPlatoonStatus = {}
-nextPlanets.forEach(p => {
-  let star1 = planetData[p]?.stars?.one || 0
-  let carryComPlatoon = carryPorPlaneta + (phaseData.earlyPlatoons || 0)
-  let carrySemPlatoon = carryPorPlaneta
-
-  if(carryComPlatoon >= star1){
-    // mesmo completando platoon bate star1
-    if(carrySemPlatoon >= star1){
-      earlyPlatoonStatus[p] = "nao_fazer" // bate star1 mesmo sem platoon
-    } else {
-      earlyPlatoonStatus[p] = "preencher_nao_completar" // só completa bate star1
-    }
-  } else {
-    // não bate star1 mesmo completando
-    earlyPlatoonStatus[p] = "completar"
-  }
-})
+let earlyPlatoonStatus = computeEarlyPlatoonStatus(phase)
 
 // ----------------
 // FAZER IMEDIATAMENTE

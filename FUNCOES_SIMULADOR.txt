@@ -1,0 +1,337 @@
+ROTE Planner — Guia de Funcionalidades
+========================================
+Autor: Leo Reichelt | Atualizado: 2026-04-13
+
+
+================================================================================
+VISÃO GERAL
+================================================================================
+
+O ROTE Planner é um simulador de planejamento para o Territory Battle ROTE
+(Rise of the Empire) do SWGoH. Ele conecta os dados reais do jogo (via Comlink)
+com um conjunto de engines de cálculo para apoiar os oficiais de guilda a:
+
+  - Planejar a sequência de planetas e fases
+  - Prever estrelas por fase e resultado total da TB
+  - Identificar bloqueadores de platoon e batalhas
+  - Recomendar farm de esquadrões por jogador
+  - Gerar briefings e guias operacionais
+
+
+================================================================================
+ROTA DE INFORMAÇÕES (FLUXO GERAL)
+================================================================================
+
+  [Jogo / API]
+       |
+       | Comlink (via Cloudflare Worker)
+       v
+  [Sync de Guilda] ──► GP por jogador, atividade (lastActivityTime)
+       |
+       | rosterEngine.fetchAll()
+       v
+  [Roster de cada jogador] ──► unidades, relic, raridade, mods, GAC/PSR
+       |
+       ├──► combatEngine.computeAndStore()  → batalhas elegíveis por planeta
+       ├──► platoonAllocEngine.computeAndStore() → alocação de slots de platoon
+       └──► localStorage (namespace por allycode)
+                |
+                ▼
+         [UI / Engines de cálculo]
+                |
+                ├── Cabeçalho: GP ativo min/max, estrelas previstas
+                ├── Mapa de galáxia: planetas ativos com fase
+                ├── Painel de fases: detalhes, estratégia, carry-out
+                ├── Platoon list: quem vai a cada slot + sobra
+                ├── Farm crítico: unidades que bloqueiam platoons
+                └── Mapa de batalhas: elegíveis por missão + sugestões
+
+
+================================================================================
+FUNCIONALIDADES
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+1. CABEÇALHO — Dados da TB
+────────────────────────────────────────────────────────────────────────────────
+
+Campos editáveis:
+  - PG Guilda       : GP total atual da guilda
+  - Jogadores       : total de membros ativos + inativos
+  - Inativos        : membros que não vão participar (preenchido automaticamente
+                      pela sync; pode ser ajustado manualmente)
+  - Margem extra    : jogadores incertos além dos identificados automaticamente
+  - Crescimento/dia : GP médio ganho por jogador por dia (calculado do histórico
+                      de TBs ou configurável manualmente)
+
+Resultados exibidos em tempo real:
+  - PG Total        : soma simples de todos os jogadores
+  - PG ativo máximo : exclui apenas inativos confirmados
+  - PG ativo mínimo : exclui inativos + margem extra
+  - Estrelas previstas: resultado calculado para o evento atual
+
+Botões:
+  - 🔄 Sincronizar  : busca dados frescos da guilda + roster via Comlink
+  - ⚗ Simulação     : alterna para modo manual (editar batalhas e platoons)
+  - Briefing        : gera texto para colar no Discord/chat de guilda
+  - ⚙ Settings      : abre painel de configurações
+
+
+────────────────────────────────────────────────────────────────────────────────
+2. MAPA DE GALÁXIA — Seleção de planetas
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  Clique no planeta → planetFloatBox → salvar → state.planets → calculate()
+
+Ao clicar em um planeta no mapa:
+  - Selecionar fase (F1 a F6) em que o planeta será atacado
+  - O simulador valida pré-requisitos (ex: Corellia exige Mustafar)
+  - Batalhas possíveis: calculadas automaticamente pelo combatEngine após sync
+    (quantos jogadores são elegíveis para cada missão de combate)
+  - Platoons: calculados automaticamente pela análise do platoonAllocEngine
+  - Modo Simulação: batalhas e platoons editáveis manualmente
+  - Link "🗺 Ver mapa do planeta" abre o Modal de Mapa de Batalhas
+
+Missões especiais de desbloqueio:
+  - Alguns planetas têm missão especial que libera o ataque (ex: Profundity em
+    Coruscant). O painel indica se a guilda tem jogadores elegíveis para ela.
+
+
+────────────────────────────────────────────────────────────────────────────────
+3. PAINEL DE FASES — Cálculo de estrelas
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  state.planets → phaseEngine → starOptimizer → drawPhaseList()
+
+Para cada fase com planetas ativos, exibe:
+  - Planetas da fase e estrelas previstas (mínimo–máximo por planeta)
+  - GP previsto necessário para aquela fase
+  - Carry-out: GP a ser pré-carregado para o planeta da próxima fase
+  - Batalhas antecipadas: se há GP suficiente para bater antes do tempo padrão
+  - Botão "Guia da fase": gera texto operacional com objetivos, ordem de ataque
+    e instruções para colar no chat da guilda
+
+Como as estrelas são calculadas:
+  - Cada batalha de combate gera estrelas proporcionais ao GP usado
+  - Cada platoon completo multiplica o resultado da fase
+  - O engine considera GP ativo mínimo e máximo para dar uma faixa de resultado
+
+
+────────────────────────────────────────────────────────────────────────────────
+4. PLATOON LIST — Alocação de slots
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  rosterEngine.loadActive() → platoonAllocEngine → drawPlatoonList()
+
+Exibe os platoons (operações) de cada planeta ativo:
+  - Por operação (Op 1 a Op 6): lista de unidades necessárias
+  - Para cada slot: jogador sugerido para alocar (o de menor GP que atende)
+  - Relic/estrelas: nível da unidade do jogador sugerido
+  - Status por operação: Completo / Parcial / Impossível
+  - "+N sobra" (clicável): jogadores extras que também têm aquela unidade
+    e que não foram alocados — disponíveis para batalha
+
+Critério de prioridade do engine:
+  1. Menor GP do personagem (preserva jogadores fortes para batalhas)
+  2. Exatamente no relic mínimo (sem desperdício)
+  Para naves: exige nave 7★ E piloto no relic mínimo exigido
+
+Farm crítico (topo da coluna direita):
+  - Lista as unidades que estão bloqueando platoons nos planetas ativos
+  - Mostra quantos jogadores têm vs. quantos são necessários
+  - Aviso especial quando o slot é impossível de completar
+
+
+────────────────────────────────────────────────────────────────────────────────
+5. MAPA DE BATALHAS — Modal por planeta
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  combatEngine.load() + platoonAllocEngine.load() → drawBattleMap.js
+
+Aberto ao clicar em "🗺 Ver mapa do planeta" no float do planeta.
+Exibe:
+  - Imagem do mapa do planeta (layout das batalhas)
+  - Seletor de fase: permite visualizar composições de qualquer fase (F1–F6),
+    não apenas a fase atual do planeta
+  - Por jogador elegível: lista de missões (M1, M2...) com o squad necessário,
+    mostrando o squad completo (líder + membros)
+  - Sugestão platoon × batalha:
+    Se um jogador está alocado em platoon MAS também é elegível para batalha,
+    o modal sugere movê-lo para a batalha e alocar um substituto no platoon
+    (apenas quando há candidato alternativo sem elegibilidade de batalha)
+
+
+────────────────────────────────────────────────────────────────────────────────
+6. FARM DE ESQUADRÕES — Recomendação por jogador
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  rosterEngine.loadActive() + SQUAD_META → squadFarmEngine → drawFarmList()
+
+Para cada jogador ativo, recomenda qual squad focar para farmar:
+
+Critérios de score:
+  - Cobertura: % de membros que o jogador já tem no relic mínimo (maior peso)
+  - Multi-evento: squads que cobrem ROTE + GAC + TW têm bônus
+  - Liga GAC: squads da liga do jogador têm prioridade
+  - Presença ROTE: squads com membros em missões/platoons do ROTE têm bônus
+
+Filtros aplicados:
+  - Jornada pendente: se o squad exige personagem de jornada, verifica se o
+    jogador está ≥80% pronto; abaixo disso o squad é descartado
+  - Liga inacessível: squads de ligas muito acima do jogador são filtrados
+  - Naves: verifica nave 7★ E piloto no relic mínimo
+
+Resultado exibido:
+  - Squad recomendado com cobertura atual (ex: "3/5 membros")
+  - Membros faltando com relic atual → relic alvo
+  - Para pilotos de nave: indica o piloto como pendência, não a nave
+  - Omicron pendente: quando squad está completo mas falta aplicar omicron
+
+
+────────────────────────────────────────────────────────────────────────────────
+7. ORDENS DE PLATOON — Gerador por jogador para Discord
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  platoonAllocEngine.load() + computeEarlyPlatoonStatus() → drawPlatoonOrders.js
+
+Botão "📋 Ordens" em cada fase do painel de fases. Abre modal com a lista de
+atribuições por jogador, pronta para copiar e enviar no Discord.
+
+Regras aplicadas automaticamente:
+  - Planetas da fase N (atual): todos os slots de todas as ops (até 6 ops)
+  - Planetas da fase N+1 (próxima fase):
+      "completar"               → todos os 15 slots por operação
+      "não completar" (risco)   → 14 de 15 slots por op (não aciona a op)
+      "não preencher"           → excluído das ordens
+  - Fase N+1 completa o que ficou faltando na fase N (1 slot restante por op)
+  - Máximo 10 unidades por jogador por planeta
+  - Apenas jogadores ativos (exclui inativos e margem)
+
+Formato gerado (Discord):
+  JogadorX — Platoons F2:
+  • Geonosis Op3: Darth Nihilus (R5)
+  • Geonosis Op4: Moff Gideon (R5)
+  • Felucia Op2: Grand Inquisitor (R6)
+
+Botões disponíveis:
+  - 📋 por jogador: copia as ordens individuais para colar no privado do Discord
+  - 📋 Copiar tudo: copia todos os jogadores em um único bloco de texto
+
+
+────────────────────────────────────────────────────────────────────────────────
+8. BRIEFING PARA OFICIAIS — texto para Discord
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  state → briefings.js → clipboard (colar no Discord)
+
+Botão "Briefing para oficiais" gera um texto com:
+  - Resultado total de estrelas previsto
+  - GP ativo mínimo e máximo
+  - Por fase: planetas, estrelas esperadas, GP previsto, carry-out
+  - Batalhas antecipadas se aplicável
+
+Guia por fase (botão em cada fase):
+  - Texto operacional com planetas, objetivos, ordem de ataque
+  - Instruções de carry-out para a próxima fase
+  - Gerado para ser colado diretamente no chat da guilda
+
+
+────────────────────────────────────────────────────────────────────────────────
+9. HISTÓRICO DE TBs
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  handleBriefing() → history.js (localStorage) → drawROTEHistory()
+
+Ao gerar o briefing, o simulador salva um snapshot do estado atual:
+  - GP da guilda, nº de jogadores, sequência de planetas
+  - Os resultados reais (estrelas por fase) podem ser preenchidos manualmente
+
+Armazena até 6 eventos. Cada evento pode ser:
+  - Carregado para ver o planejamento histórico (somente leitura)
+  - Comparado graficamente via gráfico de tendência (SVG inline)
+
+Gráfico de tendência:
+  - Exibido quando há ≥2 TBs fechadas (F6 preenchida)
+  - Mostra a evolução de estrelas por fase nas últimas 5 TBs
+  - TB mais recente em destaque (linha mais grossa + cor amarela)
+
+
+────────────────────────────────────────────────────────────────────────────────
+10. CONFIGURAÇÕES (⚙ Settings)
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  localStorage ↔ settingsPanel.js ↔ engines + campos do cabeçalho
+
+Configurações disponíveis:
+  - Allycode        : qualquer membro da guilda; usado para buscar guilda + roster
+  - Margem de segurança: adiciona margem extra para jogadores não identificados
+  - Crescimento diário/jogador: calculado automaticamente do histórico (quando
+    há ≥2 TBs fechadas com ≥7 dias de diferença) ou configurável manualmente
+
+Atividade dos jogadores:
+  - Após sync, identifica automaticamente inativos (>3 dias) e margem (1–3 dias)
+  - Status pode ser alterado manualmente clicando no botão de status (ATIVO /
+    MARGEM / INATIVO)
+  - Jogadores inativos/margem são excluídos do cálculo de batalhas e platoons
+
+Contas salvas (multi-conta):
+  - Cada allycode tem seu próprio namespace isolado no localStorage
+  - Lista de contas exibida no painel com nome da guilda e data do último sync
+  - Botão "Usar" para trocar de conta:
+      * Se já há dados em cache: carrega direto (sem novo sync)
+      * Se não há dados: aciona sync automaticamente
+  - Dados não acessados em 15 dias são removidos automaticamente
+
+
+================================================================================
+MODO SIMULAÇÃO (⚗)
+================================================================================
+
+Ativa edição manual de batalhas e platoons, ignorando os dados calculados pelo
+roster. Útil para simular cenários hipotéticos ("e se tivermos X batalhas?").
+
+No modo simulação:
+  - O campo "Batalhas possíveis" fica visível e editável por planeta
+  - O campo "Platoons" fica visível e editável (0–6)
+  - Validações: batalhas não podem exceder jogadores ativos × multiplicador do
+    planeta; platoons não podem exceder 6
+
+Para voltar ao modo real: clicar em ⚗ novamente.
+
+
+================================================================================
+ARMAZENAMENTO LOCAL (localStorage)
+================================================================================
+
+Todos os dados são armazenados localmente no navegador, sem servidor próprio.
+Cada conta (allycode) tem namespace próprio:
+
+  rote_roster_v3_ALLYCODE       — roster completo de todos os jogadores
+  rote_activity_v1_ALLYCODE     — status de atividade (ativo/margem/inativo)
+  rote_guild_gp_v1_ALLYCODE     — GP individual de cada membro
+  rote_combat_battles_v1_ALLYCODE — batalhas elegíveis por planeta/jogador
+  rote_platoon_alloc_v1_ALLYCODE  — alocação de platoons calculada
+  rote_farm_assignments_v1_ALLYCODE — atribuições manuais de farm
+  roteHistory_ALLYCODE          — histórico de TBs
+  rote_accounts                 — metadados de todas as contas salvas
+  rote_allycode                 — allycode da conta atualmente ativa
+  roteState                     — sequência de planetas e configuração atual
+
+
+================================================================================
+INFRAESTRUTURA TÉCNICA (referência)
+================================================================================
+
+  Comlink Worker : https://worker-lively-heart-f0a0.leopreichelt.workers.dev
+  GitHub         : https://github.com/leopreichelt-oss/rotesimulator (branch main)
+  Tecnologia     : HTML + CSS + JavaScript puro (sem frameworks)
+                   Persistência: localStorage do navegador

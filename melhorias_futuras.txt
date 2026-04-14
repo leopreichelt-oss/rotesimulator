@@ -7,16 +7,64 @@ Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine
 MÉDIA PRIORIDADE
 ================================================================================
 
-[8] Alocação automática de platoons
-    - Situação: o platoonAllocEngine já sugere quem vai a cada slot com base em
-      critérios de prioridade (relic mínimo, menor GP do personagem). O próximo
-      passo é transformar isso em alocação automática com confirmação — similar
-      ao que o EchoBase faz via Comlink.
-    - Ação: verificar se a API Comlink expõe endpoint para submeter alocação de
-      platoon (POST /guild/platoon ou similar). Se disponível, adicionar botão
-      "Alocar automaticamente" que envia as sugestões do engine direto ao jogo,
-      com tela de confirmação antes de submeter.
-    - Dependência: confirmar disponibilidade e formato do endpoint no Comlink.
+[8] Alocação automática de platoons (Opção A — bloqueada; Opção B implementada)
+
+    SITUAÇÃO ATUAL:
+    - [CONCLUÍDO] Opção B: botão "📋 Ordens" no painel de fases gera lista por
+      jogador (nome do personagem, operação, relic) pronta para copiar e enviar
+      no Discord. Respeita regras: máx 10 unid./jogador/planeta, máx 14/15 por
+      op em planetas não-objetivo, não preenche planeta futuro se desnecessário,
+      completa na fase N+1 o que ficou faltando na fase N.
+
+    OPÇÃO A — Alocação direta no jogo (bloqueada por falta de API):
+    - O Comlink (nosso proxy) é estritamente read-only. Não existe endpoint de
+      escrita para TB. O HotUtils e EchoBase fazem engenharia reversa do cliente
+      do jogo — fora do escopo deste projeto.
+    - Para tornar a Opção A viável seriam necessários TODOS os passos abaixo:
+
+      1. AUTENTICAÇÃO POR JOGADOR (EA/CG Account)
+         Cada jogador da guilda precisa logar uma vez com sua conta EA no sistema.
+         Isso gera um token de sessão (access token + refresh token) que permite
+         ao servidor agir em nome do jogador.
+         → Implementação: formulário de login no simulador (email/senha EA ou
+           código de autorização OAuth, se a CG disponibilizar). Os tokens ficam
+           armazenados no Cloudflare KV associados ao playerId.
+
+      2. ENDPOINT DE ESCRITA NO COMLINK / WORKER
+         O Cloudflare Worker precisaria de novos endpoints:
+           POST /auth/login        → recebe credenciais EA, retorna token
+           POST /auth/refresh      → renova token expirado
+           POST /platoon/allocate  → recebe lista de alocações, chama API do jogo
+         A chamada real para o jogo seria algo como:
+           POST https://api.swgoh.gg/... (endpoint interno não documentado
+           publicamente — necessita mapeamento via proxy reverso / MITM)
+
+      3. MAPEAMENTO DO ENDPOINT INTERNO DO JOGO
+         A CG não publica documentação de escrita. Para descobrir o endpoint:
+         - Interceptar tráfego do app oficial (Charles Proxy / mitmproxy no iOS
+           ou Android) durante uma alocação manual de platoon
+         - Identificar método, URL, headers, payload e formato de resposta
+         - Replicar via Fetch no Worker
+         Risco: o endpoint pode mudar com atualizações do jogo.
+
+      4. CONTROLE DE PERMISSÃO (apenas liderança pode fazer deploy)
+         - Lista de allycodes autorizados (líderes + oficiais) armazenada no KV
+         - Verificação no Worker antes de aceitar chamada de /platoon/allocate
+         - Log de quem fez o deploy e quando
+
+      5. REGRAS DE NEGÓCIO JÁ IMPLEMENTADAS NO SIMULADOR
+         O platoonAllocEngine já tem toda a lógica necessária:
+         - Prioridade por relic mínimo e menor GP
+         - Máx 10 unidades/jogador/planeta
+         - Máx 14/15 por op em planetas não-objetivo
+         - Carry-forward (completa na N+1 o que ficou na N)
+         Essas regras precisariam ser replicadas ou chamadas no Worker antes
+         de submeter as alocações ao jogo.
+
+    RESUMO DO BLOQUEIO:
+    Sem o mapeamento do endpoint interno (item 3) e sem autenticação EA por
+    jogador (item 1), a Opção A não é viável. A Opção B resolve o problema
+    operacional para já, com o oficial gerando as ordens e distribuindo no Discord.
 
 ================================================================================
 BAIXA PRIORIDADE / VISÃO FUTURA
