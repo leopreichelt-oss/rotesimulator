@@ -70,19 +70,13 @@ MÉDIA PRIORIDADE
 BAIXA PRIORIDADE / VISÃO FUTURA
 ================================================================================
 
-[10] Tela inicial multi-evento (GAC / TW / ROTE)
-    - Situação: o simulador foi construído para ROTE, mas a estrutura de roster,
-      combatEngine e farmEngine pode ser reaproveitada para outros eventos.
-    - Proposta: adicionar uma landing page antes da UI atual onde o jogador
-      escolhe o modo:
-        [ROTE]  → fluxo atual
-        [TW]    → planejamento de defesa/ataque por zonas
-        [GAC]   → sugestão de squads por divisão/liga
-      A partir da seleção, carrega o conjunto de engines e UI do modo escolhido,
-      mas compartilha roster, sync e persistência entre todos os modos.
-    - Ação: criar tela de seleção em index.html (ou index-home.html separado).
-      Implementar ROTE primeiro; TW e GAC como módulos futuros.
-    - Prioridade: baixa — depende de estabilização completa do módulo ROTE.
+[10] Tela inicial multi-evento (GAC / TW / ROTE) — [CONCLUÍDO estrutura base]
+    - Landing page implementada em index.html (SPA — sem redirecionamento).
+    - Ao carregar: se já usou ROTE antes (localStorage), vai direto; senão mostra landing.
+    - Botão 🏠 no header retorna à landing a qualquer momento.
+    - ROTE: funcional (fluxo atual). TW e GAC: cards "Em breve" desabilitados.
+    - Próximos passos para TW/GAC: criar engines e UI específicos; compartilhar
+      rosterEngine, sync e persistência (já namespaced por allycode).
 
 ================================================================================
 NOTAS TÉCNICAS

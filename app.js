@@ -1,3 +1,29 @@
+// ── Landing page / seleção de modo ────────────────────────────────────────
+
+function showLanding() {
+  var landing = document.getElementById('landingPage')
+  var header  = document.querySelector('header')
+  var app     = document.querySelector('.container')
+  if (landing) landing.style.display = 'block'
+  if (header)  header.style.display  = 'none'
+  if (app)     app.style.display     = 'none'
+}
+
+function selectMode(mode) {
+  localStorage.setItem('rote_lastMode', mode)
+  if (mode === 'ROTE') {
+    var landing = document.getElementById('landingPage')
+    var header  = document.querySelector('header')
+    var app     = document.querySelector('.container')
+    if (landing) landing.style.display = 'none'
+    if (header)  header.style.display  = ''
+    if (app)     app.style.display     = ''
+  }
+  // TW e GAC: módulos futuros — não fazem nada por enquanto
+}
+
+// ── Inicialização ──────────────────────────────────────────────────────────
+
 window.onload = function(){
   drawPlanetList()
   drawGalaxyMap()
@@ -17,6 +43,14 @@ window.onload = function(){
   updateGPProjectionDisplay()
   if (typeof drawPlatoonList === 'function') drawPlatoonList()
   if (typeof drawFarmCritical === 'function') drawFarmCritical()
+
+  // Mostrar landing ou ir direto ao último modo usado
+  var lastMode = localStorage.getItem('rote_lastMode')
+  if (lastMode === 'ROTE') {
+    selectMode('ROTE')
+  } else {
+    showLanding()
+  }
 }
 
 function togglePhaseDetails(phase, el){

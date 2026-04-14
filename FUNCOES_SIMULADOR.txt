@@ -1,19 +1,21 @@
 ROTE Planner — Guia de Funcionalidades
 ========================================
-Autor: Leo Reichelt | Atualizado: 2026-04-13
+Autor: Leo Reichelt | Atualizado: 2026-04-14
 
 
 ================================================================================
 VISÃO GERAL
 ================================================================================
 
-O ROTE Planner é um simulador de planejamento para o Territory Battle ROTE
-(Rise of the Empire) do SWGoH. Ele conecta os dados reais do jogo (via Comlink)
+O SWGoH Planner é uma ferramenta de planejamento competitivo para SWGoH.
+Ao abrir, exibe uma tela inicial com seleção de modo (ROTE ativo; TW e GAC
+em desenvolvimento). O módulo ROTE conecta dados reais do jogo (via Comlink)
 com um conjunto de engines de cálculo para apoiar os oficiais de guilda a:
 
   - Planejar a sequência de planetas e fases
   - Prever estrelas por fase e resultado total da TB
   - Identificar bloqueadores de platoon e batalhas
+  - Gerar ordens de platoon por jogador para o Discord
   - Recomendar farm de esquadrões por jogador
   - Gerar briefings e guias operacionais
 
@@ -292,6 +294,33 @@ Contas salvas (multi-conta):
   - Dados não acessados em 15 dias são removidos automaticamente
 
 
+────────────────────────────────────────────────────────────────────────────────
+11. TELA INICIAL — Seleção de modo (Landing Page)
+────────────────────────────────────────────────────────────────────────────────
+
+Rota de informação:
+  window.onload → localStorage('rote_lastMode') → showLanding() | selectMode()
+
+Ao abrir o simulador pela primeira vez (ou sem modo salvo), exibe uma tela de
+seleção com 3 cards:
+
+  🌌 ROTE  — Rise of the Empire Territory Battle (funcional)
+  ⚔️  TW    — Territory War (em breve)
+  🏆 GAC   — Grand Arena Championship (em breve)
+
+Comportamento:
+  - Se o usuário já usou ROTE antes: vai direto para o módulo sem mostrar a landing
+  - Botão 🏠 no header retorna à tela inicial a qualquer momento
+  - A seleção é salva em localStorage('rote_lastMode')
+  - TW e GAC: cards visuais desabilitados (cursor not-allowed); sem navegação
+
+Arquitetura SPA (Single Page Application):
+  - A landing e o app ROTE coexistem no mesmo index.html
+  - showLanding(): oculta header + .container, exibe #landingPage
+  - selectMode('ROTE'): oculta #landingPage, exibe header + .container
+  - Sem recarregamento de página — todos os engines já estão inicializados
+
+
 ================================================================================
 MODO SIMULAÇÃO (⚗)
 ================================================================================
@@ -324,6 +353,7 @@ Cada conta (allycode) tem namespace próprio:
   roteHistory_ALLYCODE          — histórico de TBs
   rote_accounts                 — metadados de todas as contas salvas
   rote_allycode                 — allycode da conta atualmente ativa
+  rote_lastMode                 — último modo selecionado na landing ('ROTE')
   roteState                     — sequência de planetas e configuração atual
 
 

@@ -9,6 +9,58 @@
 
 <body>
 
+<!-- ═══════════════════════════════════════════════════
+     LANDING PAGE — seleção de modo
+     ═══════════════════════════════════════════════════ -->
+<div id="landingPage" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:1000;overflow-y:auto;">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
+
+    <!-- Logo / título -->
+    <div style="text-align:center;margin-bottom:40px;">
+      <div style="font-size:36px;margin-bottom:8px;">⚔</div>
+      <h1 style="margin:0;font-size:28px;color:#ffd700;letter-spacing:1px;">SWGoH Planner</h1>
+      <div style="font-size:13px;color:#64748b;margin-top:6px;">by Leo Reichelt</div>
+    </div>
+
+    <!-- Cards de modo -->
+    <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:780px;">
+
+      <!-- ROTE -->
+      <div onclick="selectMode('ROTE')"
+           style="width:220px;background:#1e293b;border:2px solid #ffd700;border-radius:12px;padding:24px 20px;cursor:pointer;transition:transform .15s,box-shadow .15s;text-align:center;"
+           onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(255,215,0,0.2)'"
+           onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="font-size:40px;margin-bottom:12px;">🌌</div>
+        <div style="font-size:16px;font-weight:bold;color:#ffd700;margin-bottom:6px;">ROTE</div>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-bottom:16px;">Rise of the Empire<br>Territory Battle</div>
+        <div style="font-size:12px;color:#4ade80;font-weight:bold;">Acessar →</div>
+      </div>
+
+      <!-- TW -->
+      <div style="width:220px;background:#1e293b;border:2px solid #334155;border-radius:12px;padding:24px 20px;text-align:center;opacity:0.5;cursor:not-allowed;">
+        <div style="font-size:40px;margin-bottom:12px;">⚔️</div>
+        <div style="font-size:16px;font-weight:bold;color:#94a3b8;margin-bottom:6px;">TW</div>
+        <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:16px;">Territory War<br>Defesa e ataque</div>
+        <div style="font-size:12px;color:#475569;">Em breve</div>
+      </div>
+
+      <!-- GAC -->
+      <div style="width:220px;background:#1e293b;border:2px solid #334155;border-radius:12px;padding:24px 20px;text-align:center;opacity:0.5;cursor:not-allowed;">
+        <div style="font-size:40px;margin-bottom:12px;">🏆</div>
+        <div style="font-size:16px;font-weight:bold;color:#94a3b8;margin-bottom:6px;">GAC</div>
+        <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:16px;">Grand Arena<br>Squads por liga</div>
+        <div style="font-size:12px;color:#475569;">Em breve</div>
+      </div>
+
+    </div>
+
+    <!-- Rodapé -->
+    <div style="margin-top:48px;font-size:10px;color:#334155;text-align:center;">
+      Dados via Comlink · Armazenamento local · Código aberto
+    </div>
+  </div>
+</div>
+
 <header>
 <div id="simHeaderFields">
 <label>PG Guilda <input id="guildGP" value="326610750"></label>
@@ -41,6 +93,7 @@ PG ativo mínimo
 Briefing para oficiais
 </button>
 <button id="btnSimMode" onclick="toggleSimMode()" title="Modo simulação: editar dados manualmente">⚗ Simulação</button>
+<button onclick="showLanding()" title="Voltar à tela inicial" style="font-size:16px;padding:4px 10px;">🏠</button>
 <button id="btnSyncGuild" onclick="syncGuild()" title="Sincronizar Guilda e Roster" style="font-size:16px;padding:4px 10px;">🔄</button>
 <button onclick="toggleSettingsPanel()">⚙ Settings</button>
 
