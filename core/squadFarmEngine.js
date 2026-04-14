@@ -79,13 +79,30 @@ var squadFarmEngine = {
     return idx >= 0 ? idx : 0
   },
 
-  // Relic atual de um personagem para um jogador (-1 = não tem)
-  _playerRelicFor: function(player, unitId) {
+  // Relic atual de uma unidade para um jogador (-1 = não tem / não elegível).
+  // Para naves: retorna 99 se nave 7★ E piloto no minRelic, -1 caso contrário.
+  // minRelic é opcional (padrão 0 = só checa 7★ da nave).
+  _playerRelicFor: function(player, unitId, minRelic) {
     if (!player.units) return -1
     var unit = player.units.find(function(u) { return u.base_id === unitId })
     if (!unit) return -1
-    if (unit.combat_type === 2 || (typeof SHIP_IDS !== 'undefined' && SHIP_IDS[unitId]))
-      return unit.rarity >= 7 ? 99 : -1
+    if (unit.combat_type === 2 || (typeof SHIP_IDS !== 'undefined' && SHIP_IDS[unitId])) {
+      if ((unit.rarity || 0) < 7) return -1
+      // Verificar piloto se minRelic fornecido e SHIP_PILOT disponível
+      var reqRelic = minRelic || 0
+      if (reqRelic > 0 && typeof SHIP_PILOT !== 'undefined') {
+        var pilotId = SHIP_PILOT[unitId]
+        if (pilotId) {
+          var pilotUnit = player.units.find(function(u) { return u.base_id === pilotId })
+          if (!pilotUnit) return -1
+          var pilotRelic = (typeof rosterEngine !== 'undefined')
+            ? rosterEngine.toRelicLevel(pilotUnit.relic_tier)
+            : Math.max(0, (pilotUnit.relic_tier || 0) - 2)
+          if (pilotRelic < reqRelic) return pilotRelic  // nave ok, piloto fraco → retorna relic do piloto
+        }
+      }
+      return 99
+    }
     return (typeof rosterEngine !== 'undefined')
       ? rosterEngine.toRelicLevel(unit.relic_tier)
       : Math.max(0, (unit.relic_tier || 0) - 2)
@@ -155,8 +172,7 @@ var squadFarmEngine = {
   _squadCoverage: function(squad, player) {
     if (squad.isFleet) {
       var have = squad.members.filter(function(uid) {
-        var unit = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
-        return unit && unit.rarity >= 7
+        return squadFarmEngine._playerRelicFor(player, uid, squad.minRelic) === 99
       }).length
       return { have: have, total: squad.members.length }
     }
@@ -249,17 +265,48 @@ var squadFarmEngine = {
       // Membros do squad que ainda precisam farmar
       var membersNeeded = []
       best.members.forEach(function(uid) {
-        var relic    = squadFarmEngine._playerRelicFor(player, uid)
+        var relic    = squadFarmEngine._playerRelicFor(player, uid, best.isFleet ? best.minRelic : 0)
         var meetsMin = best.isFleet ? relic === 99 : relic >= best.minRelic
         if (!meetsMin) {
-          var relicStr = relic < 0 ? 'sem o personagem'
-            : best.isFleet ? (relic + '★') : 'R' + relic
-          membersNeeded.push({
-            unitId:  uid,
-            name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
-            current: relicStr,
-            target:  best.isFleet ? '7★' : 'R' + best.minRelic
-          })
+          if (best.isFleet && relic >= 0 && relic < 99) {
+            // Nave em 7★ mas piloto fraco: indicar o piloto como o que precisa de upgrade
+            var pilotId = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[uid] : null
+            var shipUnit = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
+            var hasShip = shipUnit && (shipUnit.rarity || 0) >= 7
+            if (hasShip && pilotId) {
+              // Nave ok, piloto fraco — adicionar o piloto como pendência
+              membersNeeded.push({
+                unitId:   pilotId,
+                id:       pilotId,
+                name:     (typeof getUnitName === 'function') ? getUnitName(pilotId) : pilotId,
+                current:  'R' + relic,
+                target:   'R' + best.minRelic,
+                isPilot:  true,
+                shipName: (typeof getUnitName === 'function') ? getUnitName(uid) : uid
+              })
+            } else if (!hasShip) {
+              // Nave não tem 7★
+              membersNeeded.push({
+                unitId:  uid,
+                id:      uid,
+                name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
+                current: relic < 0 ? 'não tem' : (relic + '★'),
+                target:  '7★',
+                isShip:  true
+              })
+            }
+          } else {
+            var relicStr = relic < 0 ? 'não tem'
+              : best.isFleet ? (relic + '★') : 'R' + relic
+            membersNeeded.push({
+              unitId:  uid,
+              id:      uid,
+              name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
+              current: relicStr,
+              target:  best.isFleet ? '7★' : 'R' + best.minRelic,
+              isShip:  best.isFleet && relic < 0
+            })
+          }
         }
       })
 

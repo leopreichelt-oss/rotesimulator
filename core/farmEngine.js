@@ -27,24 +27,29 @@ var farmEngine = {
   PLANET_HISTORY_KEY: 'rote_farm_planet_history_v1',
   PLANET_LIMIT: 10,
 
+  _key: function(base) {
+    var ac = localStorage.getItem('rote_allycode') || ''
+    return ac ? (base + '_' + ac) : base
+  },
+
   // --------------------------------------------------
   // PERSISTÊNCIA
   // --------------------------------------------------
 
   loadAssignments: function() {
-    try { return JSON.parse(localStorage.getItem(farmEngine.STORAGE_KEY) || '{}') } catch(e) { return {} }
+    try { return JSON.parse(localStorage.getItem(farmEngine._key(farmEngine.STORAGE_KEY)) || '{}') } catch(e) { return {} }
   },
 
   saveAssignments: function(obj) {
-    try { localStorage.setItem(farmEngine.STORAGE_KEY, JSON.stringify(obj)) } catch(e) {}
+    try { localStorage.setItem(farmEngine._key(farmEngine.STORAGE_KEY), JSON.stringify(obj)) } catch(e) {}
   },
 
   loadPlanetHistory: function() {
-    try { return JSON.parse(localStorage.getItem(farmEngine.PLANET_HISTORY_KEY) || '{}') } catch(e) { return {} }
+    try { return JSON.parse(localStorage.getItem(farmEngine._key(farmEngine.PLANET_HISTORY_KEY)) || '{}') } catch(e) { return {} }
   },
 
   savePlanetHistory: function(obj) {
-    try { localStorage.setItem(farmEngine.PLANET_HISTORY_KEY, JSON.stringify(obj)) } catch(e) {}
+    try { localStorage.setItem(farmEngine._key(farmEngine.PLANET_HISTORY_KEY), JSON.stringify(obj)) } catch(e) {}
   },
 
   // --------------------------------------------------

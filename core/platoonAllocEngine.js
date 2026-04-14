@@ -23,6 +23,11 @@ var platoonAllocEngine = {
 
   STORAGE_KEY: 'rote_platoon_alloc_v1',
 
+  _key: function(base) {
+    var ac = localStorage.getItem('rote_allycode') || ''
+    return ac ? (base + '_' + ac) : base
+  },
+
   // ─── Relic real de uma unidade para um jogador (-1 = não tem) ────────────
   _unitRelic: function(player, unitId) {
     var unit = player.units ? player.units.find(function(u) { return u.base_id === unitId }) : null
@@ -38,26 +43,48 @@ var platoonAllocEngine = {
     return unit ? (unit.gp || 0) : 0
   },
 
+  // ─── Verifica se uma unidade é nave ──────────────────────────────────────
+  _isShip: function(unitId) {
+    return (typeof SHIP_IDS !== 'undefined') && !!SHIP_IDS[unitId]
+  },
+
   // ─── Candidatos para um slot, ordenados por prioridade ───────────────────
   // Retorna array de { playerId, playerName, relic, unitGP, atMin }
   //   atMin = true se relic === relicMin (candidato preferencial)
   //
+  // Para naves: elegível se rarity >= 7 (7 estrelas); relic registrado como 7
+  // Para personagens: elegível se relic >= relicMin
   // Ordenação: min exato primeiro → menor relic → menor GP do personagem específico
   // (personagem mais fraco vai pro platoon; o mais forte fica disponível pra batalha)
   _candidatesForSlot: function(unitId, relicMin, rosterMap) {
     var ce = platoonAllocEngine
+    var isShip = ce._isShip(unitId)
     var candidates = []
 
     Object.values(rosterMap).forEach(function(player) {
-      var relic = ce._unitRelic(player, unitId)
-      if (relic < relicMin) return  // não tem no nível mínimo
-      candidates.push({
-        playerId:   player.playerId || player.name,
-        playerName: player.name,
-        relic:      relic,
-        unitGP:     ce._unitGP(player, unitId),
-        atMin:      relic === relicMin
-      })
+      var unit = player.units ? player.units.find(function(u) { return u.base_id === unitId }) : null
+      if (!unit) return
+
+      if (isShip) {
+        if ((unit.rarity || 0) < 7) return  // nave não tem 7 estrelas
+        candidates.push({
+          playerId:   player.playerId || player.name,
+          playerName: player.name,
+          relic:      7,  // representação simbólica para naves 7★
+          unitGP:     ce._unitGP(player, unitId),
+          atMin:      true  // todas naves 7★ estão no "mínimo"
+        })
+      } else {
+        var relic = ce._unitRelic(player, unitId)
+        if (relic < relicMin) return  // não tem no nível mínimo
+        candidates.push({
+          playerId:   player.playerId || player.name,
+          playerName: player.name,
+          relic:      relic,
+          unitGP:     ce._unitGP(player, unitId),
+          atMin:      relic === relicMin
+        })
+      }
     })
 
     // Ordenar: min exato primeiro, depois menor relic, depois menor GP do personagem
@@ -176,6 +203,7 @@ var platoonAllocEngine = {
 
           // Pegar os 'needed' primeiros candidatos não ainda alocados nesta op
           var picked = 0
+          var slotStartIdx = result[planetName][op].length  // índice antes de inserir slots desta unitId
           for (var ci = 0; ci < candidates.length && picked < needed; ci++) {
             var cand = candidates[ci]
             // Evitar alocar o mesmo jogador 2x na mesma op
@@ -212,16 +240,27 @@ var platoonAllocEngine = {
             picked++
           }
 
+          // Candidatos excedentes (não alocados) — para exibição no modal
+          var surplusCandidates = candidates.filter(function(c) {
+            return allocPerUnit[unitId].indexOf(c.playerId) < 0
+          })
+
+          // Retroativamente adicionar surplusCandidates aos slots desta unitId recém-inseridos
+          for (var si = slotStartIdx; si < result[planetName][op].length; si++) {
+            result[planetName][op][si].surplusCandidates = surplusCandidates
+          }
+
           // Se não conseguiu alocar todos (faltam candidatos), inserir placeholders
           for (var fi = picked; fi < needed; fi++) {
             result[planetName][op].push({
-              unitId:     unitId,
-              playerId:   null,
-              playerName: null,
-              relic:      -1,
-              surplus:    candidates.length - needed,
-              isTight:    true,
-              conflict:   null
+              unitId:            unitId,
+              playerId:          null,
+              playerName:        null,
+              relic:             -1,
+              surplus:           candidates.length - needed,
+              isTight:           true,
+              conflict:          null,
+              surplusCandidates: []
             })
           }
         })
@@ -233,13 +272,13 @@ var platoonAllocEngine = {
 
   // ─── Salvar alocação no localStorage ─────────────────────────────────────
   save: function(allocation) {
-    try { localStorage.setItem(platoonAllocEngine.STORAGE_KEY, JSON.stringify(allocation)) } catch(e) {}
+    try { localStorage.setItem(platoonAllocEngine._key(platoonAllocEngine.STORAGE_KEY), JSON.stringify(allocation)) } catch(e) {}
   },
 
   // ─── Carregar alocação salva ──────────────────────────────────────────────
   load: function() {
     try {
-      var d = localStorage.getItem(platoonAllocEngine.STORAGE_KEY)
+      var d = localStorage.getItem(platoonAllocEngine._key(platoonAllocEngine.STORAGE_KEY))
       return d ? JSON.parse(d) : {}
     } catch(e) { return {} }
   },

@@ -45,7 +45,7 @@ var SHIP_IDS = {
   "XWINGRED3":1,"XWINGRESISTANCE":1,"YWINGCLONEWARS":1,"YWINGREBEL":1,
   "FIRSTORDERTIEECHELON":1,"BT1":1,"COMEUPPANCE":1,
   "ARC170CLONESERGEANT":1,"ARC170REX":1,"BLADEOFDORIN":1,
-  "MARKVIINTERCEPTOR":1,"AHSOKATANO2SHIP":1
+  "MARKVIINTERCEPTOR":1,"AHSOKATANO2SHIP":1,"PUNISHINGONE":1
 }
 
 var rosterEngine = {
@@ -53,6 +53,13 @@ var rosterEngine = {
   STORAGE_DATE_KEY: 'rote_roster_date_v3',
   ACTIVITY_KEY:     'rote_activity_v1',
   GUILD_GP_KEY:     'rote_guild_gp_v1',
+  ACCOUNTS_KEY:     'rote_accounts',
+
+  // Retorna a chave de storage com sufixo do allycode atual (multi-conta)
+  _key: function(base) {
+    var ac = localStorage.getItem('rote_allycode') || ''
+    return ac ? (base + '_' + ac) : base
+  },
 
   toRelicLevel: function (relicTier) {
     if (!relicTier || relicTier < 3) return 0
@@ -161,8 +168,8 @@ var rosterEngine = {
     function next () {
       if (current >= total) {
         try {
-          localStorage.setItem(rosterEngine.STORAGE_KEY, JSON.stringify(rosterMap))
-          localStorage.setItem(rosterEngine.STORAGE_DATE_KEY, new Date().toISOString())
+          localStorage.setItem(rosterEngine._key(rosterEngine.STORAGE_KEY), JSON.stringify(rosterMap))
+          localStorage.setItem(rosterEngine._key(rosterEngine.STORAGE_DATE_KEY), new Date().toISOString())
         } catch (e) {}
         return onDone(null, rosterMap)
       }
@@ -195,14 +202,14 @@ var rosterEngine = {
           if (!unit.modLabel) unit.modLabel = 'Sem mods'
         })
       })
-      localStorage.setItem(rosterEngine.STORAGE_KEY, JSON.stringify(v2data))
+      localStorage.setItem(rosterEngine._key(rosterEngine.STORAGE_KEY), JSON.stringify(v2data))
       return v2data
     } catch (e) { return null }
   },
 
   load: function () {
     try {
-      var d = localStorage.getItem(rosterEngine.STORAGE_KEY)
+      var d = localStorage.getItem(rosterEngine._key(rosterEngine.STORAGE_KEY))
       if (d) return JSON.parse(d)
       // v3 vazio: tentar migrar do v2
       return rosterEngine.migrateFromV2()
@@ -210,23 +217,23 @@ var rosterEngine = {
   },
 
   saveActivity: function (activityMap) {
-    try { localStorage.setItem(rosterEngine.ACTIVITY_KEY, JSON.stringify(activityMap)) } catch (e) {}
+    try { localStorage.setItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY), JSON.stringify(activityMap)) } catch (e) {}
   },
 
   loadActivity: function () {
     try {
-      var d = localStorage.getItem(rosterEngine.ACTIVITY_KEY)
+      var d = localStorage.getItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY))
       return d ? JSON.parse(d) : {}
     } catch (e) { return {} }
   },
 
   saveGuildGP: function (gpMap) {
-    try { localStorage.setItem(rosterEngine.GUILD_GP_KEY, JSON.stringify(gpMap)) } catch (e) {}
+    try { localStorage.setItem(rosterEngine._key(rosterEngine.GUILD_GP_KEY), JSON.stringify(gpMap)) } catch (e) {}
   },
 
   loadGuildGP: function () {
     try {
-      var d = localStorage.getItem(rosterEngine.GUILD_GP_KEY)
+      var d = localStorage.getItem(rosterEngine._key(rosterEngine.GUILD_GP_KEY))
       return d ? JSON.parse(d) : {}
     } catch (e) { return {} }
   },
@@ -245,7 +252,7 @@ var rosterEngine = {
 
   lastSyncDate: function () {
     try {
-      var d = localStorage.getItem(rosterEngine.STORAGE_DATE_KEY)
+      var d = localStorage.getItem(rosterEngine._key(rosterEngine.STORAGE_DATE_KEY))
       return d ? new Date(d) : null
     } catch (e) { return null }
   },
@@ -272,5 +279,54 @@ var rosterEngine = {
     var unit = player.units.find(function (u) { return u.base_id === baseId })
     if (!unit) return null
     return { score: unit.modScore || 0, label: unit.modLabel || 'Sem mods' }
+  },
+
+  // ── Gerenciamento de contas (multi-conta) ──────────────────────────────────
+
+  loadAccounts: function () {
+    try { return JSON.parse(localStorage.getItem(rosterEngine.ACCOUNTS_KEY) || '{}') } catch (e) { return {} }
+  },
+
+  // Registra/atualiza metadados de uma conta após sync bem-sucedido
+  saveAccount: function (allycode, guildName) {
+    if (!allycode) return
+    var accounts = rosterEngine.loadAccounts()
+    accounts[allycode] = {
+      guildName: guildName || (accounts[allycode] && accounts[allycode].guildName) || 'Conta ' + allycode,
+      lastAccess: new Date().toISOString(),
+      syncDate:   new Date().toISOString()
+    }
+    try { localStorage.setItem(rosterEngine.ACCOUNTS_KEY, JSON.stringify(accounts)) } catch (e) {}
+  },
+
+  // Atualiza lastAccess de uma conta já existente (sem alterar outros campos)
+  touchAccount: function (allycode) {
+    if (!allycode) return
+    var accounts = rosterEngine.loadAccounts()
+    if (!accounts[allycode]) return
+    accounts[allycode].lastAccess = new Date().toISOString()
+    try { localStorage.setItem(rosterEngine.ACCOUNTS_KEY, JSON.stringify(accounts)) } catch (e) {}
+  },
+
+  // Remove dados de contas não acessadas há mais de 15 dias
+  pruneOldAccounts: function () {
+    var accounts = rosterEngine.loadAccounts()
+    var cutoff = Date.now() - 15 * 24 * 60 * 60 * 1000
+    var allBaseKeys = [
+      rosterEngine.STORAGE_KEY, rosterEngine.STORAGE_DATE_KEY,
+      rosterEngine.ACTIVITY_KEY, rosterEngine.GUILD_GP_KEY,
+      'rote_combat_battles_v1', 'rote_platoon_alloc_v1',
+      'rote_farm_assignments_v1', 'rote_farm_planet_history_v1', 'roteHistory'
+    ]
+    var changed = false
+    Object.keys(accounts).forEach(function (ac) {
+      var lastAccess = accounts[ac].lastAccess ? new Date(accounts[ac].lastAccess).getTime() : 0
+      if (lastAccess < cutoff) {
+        allBaseKeys.forEach(function (k) { try { localStorage.removeItem(k + '_' + ac) } catch (e) {} })
+        delete accounts[ac]
+        changed = true
+      }
+    })
+    if (changed) try { localStorage.setItem(rosterEngine.ACCOUNTS_KEY, JSON.stringify(accounts)) } catch (e) {}
   }
 }

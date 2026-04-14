@@ -43,6 +43,11 @@ var MISSION_SQUADS = {
   // MUSTAFAR — DS Fase 1 / Tier 1 (R5)
   // ══════════════════════════════════════════════════════════════════════
   "Mustafar": {
+    // M5 DS Fleet (fonte: swgohrote.com P1 DS Fleet — ambas opções pouco confiáveis)
+    5: [
+      { require: ['CAPITALLEVIATHAN', 'FURYCLASSINTERCEPTOR', 'SITHBOMBER', 'SITHFIGHTER', 'MARKVIINTERCEPTOR'], isShip: true },
+      { require: ['CAPITALCHIMAERA', 'SCYTHE', 'TIEADVANCED', 'MARKVIINTERCEPTOR', 'TIEINTERCEPTOR'], isShip: true },
+    ],
     // M1 Lord Vader → keyUnit:['LORDVADER'] no COMBAT_MISSION_REQS (não sobrescrever)
     // M2 Any DS
     2: [
@@ -92,14 +97,28 @@ var MISSION_SQUADS = {
     ],
     // M3 Jabba → keyUnit no COMBAT_MISSION_REQS
     // M4 Qi'ra special → keyUnit requireAll no COMBAT_MISSION_REQS
-    // M5 LMF ship → keyUnit isShip no COMBAT_MISSION_REQS
+    // M5 Mixed fleet (fonte: swgohrote.com P1 Mixed Fleet)
+    5: [
+      { require: ['CAPITALLEVIATHAN', 'FURYCLASSINTERCEPTOR', 'SITHBOMBER', 'SITHFIGHTER', 'MARKVIINTERCEPTOR', 'TIEDAGGER'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'MILLENNIUMFALCONPRISTINE', 'YWINGREBEL', 'GHOST', 'PHANTOM2'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALRADDUS', 'MILLENNIUMFALCON', 'MG100STARFORTRESSSF17', 'COMEUPPANCE', 'XWINGBLACKONE'], isShip: true },
+      { require: ['CAPITALNEGOTIATOR', 'JEDISTARFIGHTERANAKIN', 'OUTRIDER', 'YWINGCLONEWARS'], isShip: true },
+      { require: ['CAPITALMALEVOLENCE', 'VULTUREDROID', 'HYENABOMBER'], isShip: true },
+    ],
   },
 
   // ══════════════════════════════════════════════════════════════════════
   // CORUSCANT — LS Fase 1 / Tier 1 (R5)
   // ══════════════════════════════════════════════════════════════════════
   "Coruscant": {
-    // M1 Outrider → keyUnit isShip no COMBAT_MISSION_REQS
+    // M1 LS Fleet (fonte: swgohrote.com P1 LS Fleet) — Outrider obrigatório em todas composições
+    1: [
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'MILLENNIUMFALCONPRISTINE'], isShip: true },
+      { require: ['CAPITALRADDUS', 'OUTRIDER', 'YWINGREBEL', 'XWINGRED3', 'COMEUPPANCE'], isShip: true },
+      { require: ['CAPITALNEGOTIATOR', 'OUTRIDER', 'JEDISTARFIGHTERANAKIN', 'YWINGCLONEWARS'], isShip: true },
+      { require: ['CAPITALMONCALAMARICRUISER', 'OUTRIDER', 'YWINGREBEL', 'MILLENNIUMFALCONPRISTINE'], isShip: true },
+    ],
     // M2 Any LS
     2: [
       { require: ['PRINCESSLEIA', 'R2D2_LEGENDARY', 'CAPTAINDROGAN'] },
@@ -176,12 +195,9 @@ var MISSION_SQUADS = {
       { require: ['THIRDSISTER', 'GRANDINQUISITOR', 'SEVENTHSISTER', 'EIGHTHBROTHER'] },
       { require: ['EMPERORPALPATINE', 'VADER', 'GRANDADMIRALTHRAWN', 'ADMIRALPIETT', 'DEATHTROOPER'] },
     ],
-    // M5 DS ship (atualmente keyUnit:null, isShip:true)
+    // M5 DS Fleet (fonte: swgohrote.com P2 DS Fleet — apenas comunidade, batalha difícil)
     5: [
-      { require: ['CAPITALLEVIATHAN'], isShip: true },
-      { require: ['CAPITALEXECUTOR'], isShip: true },
-      { require: ['CAPITALCHIMAERA'], isShip: true },
-      { require: ['CAPITALMALEVOLENCE'], isShip: true },
+      { require: ['CAPITALSTARDESTROYER', 'TIEADVANCED', 'EMPERORSSHUTTLE', 'SCYTHE', 'TIEINTERCEPTOR', 'TIEBOMBERIMPERIAL'], isShip: true },
     ],
   },
 
@@ -201,12 +217,12 @@ var MISSION_SQUADS = {
       { require: ['BADBATCHHUNTER', 'CT210408', 'BADBATCHWRECKER', 'BADBATCHTECH', 'BADBATCHOMEGA'] },
     ],
     // M4 Jabba → keyUnit no COMBAT_MISSION_REQS
-    // M5 Any ship
+    // M5 Mixed Fleet (fonte: swgohrote.com P2 Mixed Fleet)
     5: [
-      { require: ['CAPITALNEGOTIATOR'], isShip: true },
-      { require: ['CAPITALEXECUTOR'], isShip: true },
-      { require: ['CAPITALMALEVOLENCE'], isShip: true },
-      { require: ['CAPITALPROFUNDITY'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'GHOST', 'YWINGREBEL', 'UWINGROGUEONE'], isShip: true },
+      { require: ['CAPITALLEVIATHAN', 'FURYCLASSINTERCEPTOR', 'SITHBOMBER', 'TIEDAGGER', 'SITHFIGHTER', 'MARKVIINTERCEPTOR'], isShip: true },
+      { require: ['CAPITALMALEVOLENCE', 'VULTUREDROID', 'HYENABOMBER'], isShip: true },
     ],
   },
 
@@ -245,10 +261,12 @@ var MISSION_SQUADS = {
       { require: ['ADMIRALRADDUS', 'CASSIANANDORS1', 'JYNERSO', 'SCARIFPATHFINDER', 'K2SO'] },
       { require: ['BADBATCHHUNTER', 'CT210408', 'BADBATCHWRECKER', 'BADBATCHTECH', 'BADBATCHOMEGA'] },
     ],
-    // M4 Any LS ship
+    // M4 LS Fleet (fonte: swgohrote.com P2 LS Fleet)
     4: [
-      { require: ['CAPITALPROFUNDITY'], isShip: true },
-      { require: ['CAPITALNEGOTIATOR'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'MILLENNIUMFALCONPRISTINE', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE', 'GHOST'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'GHOST', 'PHANTOM2'], isShip: true },
+      { require: ['CAPITALNEGOTIATOR', 'OUTRIDER', 'JEDISTARFIGHTERANAKIN', 'YWINGCLONEWARS'], isShip: true },
     ],
     // M5 special unlock → computeSpecialMissionEligible
   },
@@ -316,7 +334,12 @@ var MISSION_SQUADS = {
       { require: ['SAVAGEOPRESS'] },
     ],
     // M2 Jabba → keyUnit no COMBAT_MISSION_REQS
-    // M3 Executor → keyUnit isShip no COMBAT_MISSION_REQS
+    // M3 Executor fleet (fonte: swgohrote.com P3 Mixed Fleet)
+    3: [
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'PUNISHINGONE', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'RAZORCREST', 'SLAVE1', 'IG2000'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+    ],
     // M4 Fennec → keyUnit no COMBAT_MISSION_REQS
     // M5 GI-lead Inquisitorius
     5: [
@@ -356,7 +379,11 @@ var MISSION_SQUADS = {
       { require: ['PRINCESSLEIA', 'CAPTAINDROGAN', 'CAPTAINREX'] },
       { require: ['BOKATANMANDALORE', 'PAZVIZSLA', 'IG12', 'MANDALORIANBESKAR'] },
     ],
-    // M4 Profundity → keyUnit isShip no COMBAT_MISSION_REQS
+    // M4 LS Fleet (fonte: swgohrote.com P3 LS Fleet — Profundity mandatory)
+    4: [
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE', 'GHOST'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'GHOST', 'PHANTOM2'], isShip: true },
+    ],
     // M5 Saw Gerrera (0 elegíveis no JSON, inelegíveis válidos)
     5: [
       { require: ['SAWGERRERA', 'ADMIRALRADDUS', 'CAPTAINREX'] },
@@ -421,18 +448,25 @@ var MISSION_SQUADS = {
     ],
     // M3 Qi'ra+L3 → keyUnit requireAll no COMBAT_MISSION_REQS
     // M4 Jabba → keyUnit no COMBAT_MISSION_REQS
-    // M5 Ghost ship → keyUnit isShip no COMBAT_MISSION_REQS
+    // M5 Mixed Fleet — Ghost obrigatório (fonte: swgohrote.com P4 Mixed Fleet)
+    5: [
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'GHOST', 'YWINGREBEL', 'UWINGROGUEONE', 'PHANTOM2'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'GHOST', 'RAZORCREST', 'SLAVE1', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'GHOST', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+    ],
   },
 
   // ══════════════════════════════════════════════════════════════════════
   // LOTHAL — LS Fase 4 / Tier 4 (R7)
   // ══════════════════════════════════════════════════════════════════════
   "Lothal": {
-    // M1 Any LS ship (atualmente keyUnit:null, isShip:true)
+    // M1 LS Fleet (fonte: swgohrote.com P4 LS Fleet)
     1: [
-      { require: ['CAPITALNEGOTIATOR'], isShip: true },
-      { require: ['CAPITALPROFUNDITY'], isShip: true },
-      { require: ['CAPITALRADDUS'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'MILLENNIUMFALCONPRISTINE'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'GHOST', 'PHANTOM2'], isShip: true },
+      { require: ['CAPITALNEGOTIATOR', 'JEDISTARFIGHTERANAKIN', 'YWINGCLONEWARS', 'AHSOKATANO2SHIP', 'BLADEOFDORIN'], isShip: true },
+      { require: ['CAPITALMONCALAMARICRUISER', 'OUTRIDER', 'YWINGREBEL', 'MILLENNIUMFALCONPRISTINE', 'GHOST'], isShip: true },
+      { require: ['CAPITALRADDUS', 'OUTRIDER', 'YWINGREBEL', 'MG100STARFORTRESSSF17', 'XWINGBLACKONE'], isShip: true },
     ],
     // M2 Any LS
     2: [
@@ -492,11 +526,13 @@ var MISSION_SQUADS = {
       { require: ['PRINCESSLEIA', 'FULCRUM', 'ADMIRALRADDUS', 'COMMANDERAHSOKA'] },
     ],
     // M4 Jabba → keyUnit no COMBAT_MISSION_REQS
-    // M5 Any ship
+    // M5 Mixed Fleet (fonte: swgohrote.com P5 Mixed Fleet)
     5: [
-      { require: ['CAPITALEXECUTOR'], isShip: true },
-      { require: ['CAPITALPROFUNDITY'], isShip: true },
-      { require: ['CAPITALNEGOTIATOR'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'RAZORCREST', 'PUNISHINGONE', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'PUNISHINGONE', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALEXECUTOR', 'HOUNDSTOOTH', 'SLAVE1', 'IG2000', 'XANADUBLOOD'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE', 'MILLENNIUMFALCONPRISTINE', 'GHOST'], isShip: true },
+      { require: ['CAPITALLEVIATHAN', 'FURYCLASSINTERCEPTOR', 'SITHBOMBER', 'TIEDAGGER', 'SITHFIGHTER', 'MARKVIINTERCEPTOR'], isShip: true },
     ],
   },
 
@@ -514,10 +550,11 @@ var MISSION_SQUADS = {
       { require: ['JEDIMASTERKENOBI'] },
     ],
     // M3 Cassian+K2 → keyUnit:['K2SO'] no COMBAT_MISSION_REQS
-    // M4 Any LS ship
+    // M4 LS Fleet (fonte: swgohrote.com P5 LS Ships — Profundity + Rogue One)
     4: [
-      { require: ['CAPITALPROFUNDITY'], isShip: true },
-      { require: ['CAPITALNEGOTIATOR'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE', 'MILLENNIUMFALCONPRISTINE'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'UWINGROGUEONE', 'GHOST'], isShip: true },
+      { require: ['CAPITALMONCALAMARICRUISER', 'OUTRIDER', 'YWINGREBEL', 'XWINGRED3', 'XWINGRED2'], isShip: true },
     ],
     // M5 JMMW — composições pendentes (ver M1)
     5: [],
@@ -538,7 +575,10 @@ var MISSION_SQUADS = {
     ],
     3: [], // sem composições utilizáveis neste tier
     // M4 Darth Vader → keyUnit:['VADER'] no COMBAT_MISSION_REQS
-    // M5 Imperial TIE → keyUnit isShip no COMBAT_MISSION_REQS
+    // M5 Imperial Fleet (fonte: swgohrote.com P6 DS Fleets — community, manual)
+    5: [
+      { require: ['CAPITALSTARDESTROYER', 'TIEFIGHTERIMPERIAL', 'TIEADVANCED', 'EMPERORSSHUTTLE', 'SCYTHE', 'TIEINTERCEPTOR', 'TIEBOMBERIMPERIAL'], isShip: true },
+    ],
   },
 
   // ══════════════════════════════════════════════════════════════════════
@@ -560,7 +600,11 @@ var MISSION_SQUADS = {
     5: [],
     // M1 Baze+Chirrut → keyUnit requireAll no COMBAT_MISSION_REQS
     // M2 Cassian+K2+Pao → keyUnit requireAll no COMBAT_MISSION_REQS
-    // M3 Profundity → keyUnit isShip no COMBAT_MISSION_REQS
+    // M3 LS Fleet (fonte: swgohrote.com P6 LS Ships — Profundity + Rogue One)
+    3: [
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'YWINGREBEL', 'PHANTOM2', 'UWINGROGUEONE'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'MILLENNIUMFALCONPRISTINE', 'OUTRIDER', 'YWINGREBEL', 'PHANTOM2'], isShip: true },
+    ],
   },
 
   // ══════════════════════════════════════════════════════════════════════
@@ -594,7 +638,10 @@ var MISSION_SQUADS = {
       { require: ['BADBATCHHUNTER', 'CT210408', 'BADBATCHTECH', 'BADBATCHWRECKER'] },
       { require: ['CAPTAINREX', 'CT5555', 'CAPTAINDROGAN'] },
     ],
-    // M5 Negotiator → keyUnit isShip no COMBAT_MISSION_REQS
+    // M5 Negotiator fleet (fonte: swgohrote.com Zeffo Fleet — auto 75%)
+    5: [
+      { require: ['CAPITALNEGOTIATOR', 'JEDISTARFIGHTERANAKIN', 'YWINGCLONEWARS', 'AHSOKATANO2SHIP', 'BLADEOFDORIN'], isShip: true },
+    ],
   },
 
   // ══════════════════════════════════════════════════════════════════════
@@ -612,7 +659,11 @@ var MISSION_SQUADS = {
       { require: ['SITHETERNALPALPATINE', 'DARTHMALAK'] },
     ],
     // M3 R9 BKM → keyUnit:['BOKATAN'] no COMBAT_MISSION_REQS
-    // M4 Gauntlet → keyUnit isShip no COMBAT_MISSION_REQS
+    // M4 Fleet (fonte: swgohrote.com Mandalore Fleet)
+    4: [
+      { require: ['CAPITALLEVIATHAN', 'GAUNTLETSTARFIGHTER', 'FURYCLASSINTERCEPTOR', 'SITHBOMBER', 'SITHFIGHTER', 'MARKVIINTERCEPTOR'], isShip: true },
+      { require: ['CAPITALPROFUNDITY', 'OUTRIDER', 'PHANTOM2', 'YWINGREBEL', 'MILLENNIUMFALCONPRISTINE'], isShip: true },
+    ],
   },
 
 }

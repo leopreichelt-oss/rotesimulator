@@ -1,15 +1,18 @@
-const HISTORY_KEY = "roteHistory"
+function _historyKey(){
+  var ac = localStorage.getItem('rote_allycode') || ''
+  return ac ? ('roteHistory_' + ac) : 'roteHistory'
+}
 
 // ----------------------
 // LER / SALVAR HISTÓRICO
 // ----------------------
 
 function getROTEHistory(){
-  return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]")
+  return JSON.parse(localStorage.getItem(_historyKey()) || "[]")
 }
 
 function saveROTEHistory(history){
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  localStorage.setItem(_historyKey(), JSON.stringify(history))
 }
 
 // ----------------------

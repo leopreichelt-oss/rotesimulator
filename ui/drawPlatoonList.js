@@ -575,9 +575,20 @@ function showPlatoonAllocModal(planets) {
         var unitSlots = byUnit[unitId]
         var s0 = unitSlots[0]
         var uname = (typeof getUnitName === 'function') ? getUnitName(unitId) : unitId
-        var surplusLabel = s0.surplus < 0 ? '<span style="color:#f87171;">faltam ' + Math.abs(s0.surplus) + '</span>'
-          : s0.surplus === 0 ? '<span style="color:#f97316;">exato</span>'
-          : '<span style="color:#fbbf24;">+' + s0.surplus + ' sobra</span>'
+        // ID único para o painel expansível de excedentes
+        var surplusToggleId = 'surplus_' + planetName.replace(/\s/g,'_') + '_' + opStr + '_' + unitId
+
+        var surplusLabel
+        if (s0.surplus < 0) {
+          surplusLabel = '<span style="color:#f87171;">faltam ' + Math.abs(s0.surplus) + '</span>'
+        } else if (s0.surplus === 0) {
+          surplusLabel = '<span style="color:#f97316;">exato</span>'
+        } else {
+          // Clicável quando há excedentes
+          surplusLabel = '<span style="color:#fbbf24;cursor:pointer;text-decoration:underline dotted;" '
+            + 'onclick="(function(el){var p=document.getElementById(\'' + surplusToggleId + '\');if(p){p.style.display=p.style.display===\'none\'?\'block\':\'none\';el.textContent=p.style.display===\'none\'?\'+'+ s0.surplus +' sobra ▾\':\'+'+ s0.surplus +' sobra ▴\'}})(this)" '
+            + 'title="Ver jogadores com sobra">+' + s0.surplus + ' sobra ▾</span>'
+        }
 
         opHtml += '<div style="margin-bottom:6px;padding:6px;background:#0f172a;border-radius:4px;border-left:3px solid ' + (s0.surplus <= 0 ? '#f87171' : s0.surplus <= 1 ? '#f97316' : '#fbbf24') + ';">'
         opHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
@@ -585,12 +596,26 @@ function showPlatoonAllocModal(planets) {
         opHtml += '<span style="font-size:10px;">' + surplusLabel + '</span>'
         opHtml += '</div>'
 
+        // Painel oculto com a lista de excedentes
+        if (s0.surplus > 0 && s0.surplusCandidates && s0.surplusCandidates.length > 0) {
+          var isShipForSurplus = (typeof platoonAllocEngine !== 'undefined') && platoonAllocEngine._isShip(unitId)
+          opHtml += '<div id="' + surplusToggleId + '" style="display:none;margin-top:4px;padding:4px 6px;background:#1e293b;border-radius:4px;border-top:1px solid #334155;">'
+          opHtml += '<div style="color:#64748b;font-size:9px;margin-bottom:3px;">Jogadores com sobra (disponíveis para batalha):</div>'
+          s0.surplusCandidates.forEach(function(sc) {
+            var scRelicLabel = isShipForSurplus ? '7★' : 'R' + sc.relic
+            opHtml += '<div style="font-size:10px;color:#94a3b8;padding:1px 0;">'
+              + '→ ' + sc.playerName + ' <span style="color:#475569;">' + scRelicLabel + '</span></div>'
+          })
+          opHtml += '</div>'
+        }
+
         unitSlots.forEach(function(s) {
           if (!s.playerId) {
             opHtml += '<div style="color:#f87171;font-size:10px;padding-left:6px;">❌ Sem candidato disponível</div>'
             return
           }
-          var relicLabel = 'R' + s.relic
+          var isShipUnit = (typeof platoonAllocEngine !== 'undefined') && platoonAllocEngine._isShip(s.unitId)
+          var relicLabel = isShipUnit ? '7★' : 'R' + s.relic
           var gpLabel = ''
           // Buscar GP da unidade do jogador
           var playerObj = Object.values(rosterMap).find(function(p) { return (p.playerId || p.name) === s.playerId })
@@ -962,7 +987,9 @@ function _showSquadFarmModal() {
 
       if (r.membersNeeded.length > 0) {
         lines.push('  Farmar squad: ' + r.membersNeeded.map(function(m) {
-          return m.name + ' (' + m.current + ' → ' + m.target + ')'
+          var label = m.name + ' (' + m.current + ' → ' + m.target + ')'
+          if (m.isPilot) label += ' [piloto de ' + m.shipName + ']'
+          return label
         }).join(', '))
       }
 

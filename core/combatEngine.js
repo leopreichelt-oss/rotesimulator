@@ -258,15 +258,35 @@ var combatEngine = {
 
   STORAGE_KEY: 'rote_combat_battles_v1',
 
+  _key: function(base) {
+    var ac = localStorage.getItem('rote_allycode') || ''
+    return ac ? (base + '_' + ac) : base
+  },
+
   // GP de referência por relic para detecção de mods bons (proxy de qualidade)
   // Valores baseados em média observada: personagem R5 nivel 85 sem mods ~20K, com mods médios ~27K
   GP_BASELINE: { 5: 25000, 6: 31000, 7: 38000, 8: 46000, 9: 56000, 10: 68000 },
 
-  // Verifica se um jogador tem a unidade no nível mínimo exigido
+  // Verifica se um jogador tem a unidade no nível mínimo exigido.
+  // Para naves: exige nave 7★ E piloto no relic mínimo (via SHIP_PILOT).
+  // Naves capital não têm piloto verificável desta forma (piloto é GL/lendário) — só 7★.
   _playerHasUnit: function(player, unitId, minRelic, isShip) {
     var unit = player.units.find(function(u) { return u.base_id === unitId })
     if (!unit) return false
-    if (isShip) return unit.rarity >= 7
+    if (isShip) {
+      if (unit.rarity < 7) return false
+      // Verificar piloto (apenas naves de escolta com piloto mapeado)
+      var pilotId = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[unitId] : null
+      if (pilotId) {
+        var pilotUnit = player.units.find(function(u) { return u.base_id === pilotId })
+        if (!pilotUnit) return false
+        var pilotRelic = (typeof rosterEngine !== 'undefined')
+          ? rosterEngine.toRelicLevel(pilotUnit.relic_tier)
+          : Math.max(0, (pilotUnit.relic_tier || 0) - 2)
+        if (pilotRelic < minRelic) return false
+      }
+      return true
+    }
     return (typeof rosterEngine !== 'undefined')
       ? rosterEngine.toRelicLevel(unit.relic_tier) >= minRelic
       : (unit.relic_tier - 2) >= minRelic
@@ -561,13 +581,13 @@ var combatEngine = {
       if (battles) result[planetName] = battles
     })
 
-    try { localStorage.setItem(combatEngine.STORAGE_KEY, JSON.stringify(result)) } catch(e) {}
+    try { localStorage.setItem(combatEngine._key(combatEngine.STORAGE_KEY), JSON.stringify(result)) } catch(e) {}
     return result
   },
 
   load: function() {
     try {
-      var d = localStorage.getItem(combatEngine.STORAGE_KEY)
+      var d = localStorage.getItem(combatEngine._key(combatEngine.STORAGE_KEY))
       return d ? JSON.parse(d) : {}
     } catch(e) { return {} }
   },
@@ -618,14 +638,16 @@ var combatEngine = {
             eligibleSquads.push(['any'])
           } else {
             var isShip = !!req.isShip
-            var eligible = false
             if (req.requireAll) {
-              eligible = req.keyUnit.every(function(uid) { return ce._playerHasUnit(player, uid, minRelic, isShip) })
+              var eligible = req.keyUnit.every(function(uid) { return ce._playerHasUnit(player, uid, minRelic, isShip) })
               if (eligible) eligibleSquads.push(req.keyUnit)
             } else {
-              req.keyUnit.forEach(function(uid) {
-                if (ce._playerHasUnit(player, uid, minRelic, isShip)) eligibleSquads.push([uid])
+              // Missão "any keyUnit": mostrar todas as units que o jogador possui
+              // agrupadas em um único squad (não uma por vez)
+              var metUnits = req.keyUnit.filter(function(uid) {
+                return ce._playerHasUnit(player, uid, minRelic, isShip)
               })
+              if (metUnits.length > 0) eligibleSquads.push(metUnits)
             }
           }
         }

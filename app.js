@@ -3,6 +3,12 @@ window.onload = function(){
   drawGalaxyMap()
   loadState()
   if (typeof applySimMode === 'function') applySimMode()
+  // Multi-conta: limpar contas antigas e registrar acesso à conta atual
+  if (typeof rosterEngine !== 'undefined') {
+    rosterEngine.pruneOldAccounts()
+    var _ac = localStorage.getItem('rote_allycode')
+    if (_ac) rosterEngine.touchAccount(_ac)
+  }
   // Restaurar lista de inativos/margem do localStorage (sem precisar resincronizar)
   if (typeof _loadActivityStatusFromStorage === 'function') _loadActivityStatusFromStorage()
   if (typeof checkAutoSync === 'function') checkAutoSync()

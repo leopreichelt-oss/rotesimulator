@@ -1,21 +1,40 @@
 ROTE Planner — Melhorias Futuras
 =================================
-Gerado em: 2026-04-07 / Atualizado em: 2026-04-12
+Gerado em: 2026-04-07 / Atualizado em: 2026-04-13
 Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
 
 ================================================================================
 MÉDIA PRIORIDADE
 ================================================================================
 
-[5] Mapa de batalhas — melhorias de UX
-    - Situação: o modal atual (drawBattleMap.js) mostra jogadores elegíveis e
-      esquadrões sugeridos, mas ainda falta:
-        a) indicar quantas estrelas cada jogador já contribuiu em TBs anteriores
-        b) ordenação por "melhor contribuinte esperado" (GP ponderado)
-        c) filtro por fase (mostrar apenas missões da fase ativa)
-        d) highlight de jogadores que melhorariam muito com uma upgrade de relíquia
-    - Ação: integrar dados históricos do roteHistory e o GP calculado por
-      combatEngine para ranquear jogadores no painel lateral.
+[8] Alocação automática de platoons
+    - Situação: o platoonAllocEngine já sugere quem vai a cada slot com base em
+      critérios de prioridade (relic mínimo, menor GP do personagem). O próximo
+      passo é transformar isso em alocação automática com confirmação — similar
+      ao que o EchoBase faz via Comlink.
+    - Ação: verificar se a API Comlink expõe endpoint para submeter alocação de
+      platoon (POST /guild/platoon ou similar). Se disponível, adicionar botão
+      "Alocar automaticamente" que envia as sugestões do engine direto ao jogo,
+      com tela de confirmação antes de submeter.
+    - Dependência: confirmar disponibilidade e formato do endpoint no Comlink.
+
+================================================================================
+BAIXA PRIORIDADE / VISÃO FUTURA
+================================================================================
+
+[10] Tela inicial multi-evento (GAC / TW / ROTE)
+    - Situação: o simulador foi construído para ROTE, mas a estrutura de roster,
+      combatEngine e farmEngine pode ser reaproveitada para outros eventos.
+    - Proposta: adicionar uma landing page antes da UI atual onde o jogador
+      escolhe o modo:
+        [ROTE]  → fluxo atual
+        [TW]    → planejamento de defesa/ataque por zonas
+        [GAC]   → sugestão de squads por divisão/liga
+      A partir da seleção, carrega o conjunto de engines e UI do modo escolhido,
+      mas compartilha roster, sync e persistência entre todos os modos.
+    - Ação: criar tela de seleção em index.html (ou index-home.html separado).
+      Implementar ROTE primeiro; TW e GAC como módulos futuros.
+    - Prioridade: baixa — depende de estabilização completa do módulo ROTE.
 
 ================================================================================
 NOTAS TÉCNICAS

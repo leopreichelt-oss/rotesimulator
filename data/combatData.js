@@ -147,6 +147,7 @@ var SHIP_PILOT = {
   // ── Caçadores / Mistos ────────────────────────────────────────────────
   'IG2000':                   'IG88',
   'XANADUBLOOD':              'AURRA_SING',
+  'PUNISHINGONE':             'DENGAR',
 
   // ── Ships nomeados já mapeados ────────────────────────────────────────
   'SCYTHE':                   'LORDVADER',

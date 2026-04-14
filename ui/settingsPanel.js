@@ -92,6 +92,76 @@ function formatDaysAgo(daysAgo) {
   return hours + 'h'
 }
 
+// Troca a conta ativa para o allycode fornecido.
+// Se já existir cache para este allycode, carrega direto (sem sync).
+// Se não existir, aciona sync automaticamente.
+function switchAccount(allycode) {
+  allycode = String(allycode).replace(/\D/g, '')
+  if (!allycode) return
+
+  settingsState.allycode = allycode
+  localStorage.setItem('rote_allycode', allycode)
+
+  // Atualizar input de allycode se visível
+  var input = document.getElementById('settingsAllycode')
+  if (input) input.value = allycode
+
+  // Atualizar lastAccess da conta
+  rosterEngine.touchAccount(allycode)
+
+  // Recarregar status de atividade para o novo allycode
+  if (typeof _loadActivityStatusFromStorage === 'function') _loadActivityStatusFromStorage()
+
+  // Verificar se há roster armazenado para esta conta
+  var hasRoster = !!rosterEngine.load()
+
+  if (hasRoster) {
+    // Dados existem → carregar direto sem sync
+    if (typeof calculate === 'function') calculate()
+    if (typeof drawPlatoonList === 'function') drawPlatoonList()
+    if (typeof drawFarmCritical === 'function') drawFarmCritical()
+    if (typeof drawROTEHistory === 'function') drawROTEHistory()
+    renderSettingsPanel()
+  } else {
+    // Sem dados → disparar sync
+    renderSettingsPanel()
+    syncGuild()
+  }
+}
+
+// Renderiza a seção "Contas salvas" no painel de settings
+function _renderAccountsSection() {
+  var accounts = rosterEngine.loadAccounts()
+  var allycodes = Object.keys(accounts)
+  if (allycodes.length === 0) return ''
+
+  var currentAc = settingsState.allycode
+
+  var rows = allycodes.map(function(ac) {
+    var meta = accounts[ac]
+    var isCurrent = (ac === currentAc)
+    var syncDate = meta.syncDate ? new Date(meta.syncDate).toLocaleDateString('pt-BR') : '—'
+    var guildName = meta.guildName || 'Conta ' + ac
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1e293b;">' +
+      '<div style="flex:1;min-width:0;overflow:hidden;">' +
+        '<div style="font-size:11px;color:' + (isCurrent ? '#93c5fd' : '#cbd5e1') + ';font-weight:' + (isCurrent ? 'bold' : 'normal') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+          (isCurrent ? '▶ ' : '') + guildName +
+        '</div>' +
+        '<div style="font-size:10px;color:#475569;">' + ac + ' · sync ' + syncDate + '</div>' +
+      '</div>' +
+      (isCurrent
+        ? '<span style="font-size:10px;color:#4da6ff;white-space:nowrap;">ativa</span>'
+        : '<button onclick="switchAccount(\'' + ac + '\')" style="font-size:10px;padding:2px 8px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:3px;cursor:pointer;white-space:nowrap;">Usar</button>'
+      ) +
+    '</div>'
+  }).join('')
+
+  return '<div style="margin-top:12px;border-top:1px solid #334155;padding-top:10px;">' +
+    '<div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Contas salvas</div>' +
+    rows +
+  '</div>'
+}
+
 // Abre/fecha o painel de settings
 function toggleSettingsPanel() {
   var panel = document.getElementById('settingsPanel')
@@ -202,7 +272,8 @@ function renderSettingsPanel() {
       '</button>' +
     '</div>' +
 
-    renderActivityList()
+    renderActivityList() +
+    _renderAccountsSection()
 }
 
 // Alterna status de um jogador manualmente (ativo → margem → inativo → ativo)
@@ -360,9 +431,9 @@ function syncGuild() {
 
     // Invalidar roster e cache de batalhas da guilda anterior ANTES de buscar o novo
     // Evita que calculate() e drawPlatoonList() usem dados da guilda errada durante o fetchAll
-    try { localStorage.removeItem(rosterEngine.STORAGE_KEY) } catch(e) {}
-    try { localStorage.removeItem(combatEngine.STORAGE_KEY) } catch(e) {}
-    try { localStorage.removeItem(rosterEngine.ACTIVITY_KEY) } catch(e) {}
+    try { localStorage.removeItem(rosterEngine._key(rosterEngine.STORAGE_KEY)) } catch(e) {}
+    try { localStorage.removeItem(combatEngine._key(combatEngine.STORAGE_KEY)) } catch(e) {}
+    try { localStorage.removeItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY)) } catch(e) {}
 
     // Calcular inativos/margem a partir do lastActivityTime
     var actStatus = computeActivityStatus(guildData.members)
@@ -408,6 +479,12 @@ function syncGuild() {
           // Gerar lista de alocação de platoons
           if (typeof platoonAllocEngine !== 'undefined') {
             platoonAllocEngine.computeAndStore(rosterMap)
+          }
+
+          // Registrar conta nos metadados de multi-conta
+          if (typeof rosterEngine !== 'undefined') {
+            var guildNameForAccount = settingsState.guildData ? settingsState.guildData.guildName : null
+            rosterEngine.saveAccount(allycode, guildNameForAccount)
           }
 
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
