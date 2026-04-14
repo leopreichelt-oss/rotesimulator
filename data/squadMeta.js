@@ -113,6 +113,7 @@ var SQUAD_META = [
     journeyUnit: 'DOCTORAPHRA', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'DS', leagueMin: 'CARBONITE',
+    specialMission: true,
     note: 'Aphra requer Evento de Legado (Hondo, 0-0-0, BT-1, Sana Starros R5). Chave para ROTE.'
   },
   {
@@ -234,6 +235,7 @@ var SQUAD_META = [
     journeyUnit: 'BOKATAN', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'MS', leagueMin: 'BRONZIUM',
+    specialMission: true,
     note: 'Bo-Katan libera Mandalore (ROTE). O Mandaloriano Beskar requer jornada própria.'
   },
   {
@@ -291,6 +293,7 @@ var SQUAD_META = [
     journeyUnit: null,
     events: { rote: true, gac: true, tw: false },
     alignment: 'LS', leagueMin: 'CARBONITE',
+    specialMission: true,
     note: '⭐ PRIORIDADE: libera Zeffo (dobra premiação do evento). Todos os membros farmáveis diretamente. Cal Kestis Cavaleiro Jedi requer todos em Gear 12.'
   },
 

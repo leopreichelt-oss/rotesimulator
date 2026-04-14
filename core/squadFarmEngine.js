@@ -215,7 +215,7 @@ var squadFarmEngine = {
     }
     // ─────────────────────────────────────────────────────────────────────
 
-    // Fator de cobertura: 0.0 a 1.0 (quanto já tem)
+    // Fator de cobertura: 0.0 a 1.0 (quanto já tem, mais perto de completar = maior score)
     var coverage = cov.total > 0 ? cov.have / cov.total : 0
 
     // Fator multi-evento: 1 evento = 1pt, 2 = 2pt, 3 = 3pt
@@ -228,13 +228,60 @@ var squadFarmEngine = {
     // Escala: 0 (sem presença) → 1.5 (todos os membros aparecem frequentemente)
     var roteBonus = squadFarmEngine._roteWeight(squad) * 1.5
 
-    // Score base: cobertura (principal) + multi-evento + liga + ROTE
-    var baseScore = (coverage * 5) + (eventsCount * 0.5) + leagueMatch + roteBonus
+    // Bônus de missão especial: squads que desbloqueiam planetas chave (Bracca/Mandalore)
+    // ou são essenciais para ROTE — garante que apareçam como próxima recomendação
+    var specialBonus = squad.specialMission ? 2.0 : 0
+
+    // Score base: cobertura (principal) + multi-evento + liga + ROTE + missão especial
+    var baseScore = (coverage * 5) + (eventsCount * 0.5) + leagueMatch + roteBonus + specialBonus
 
     // Penalidade se jornada ainda pendente (maior custo total)
     var score = journeyPending ? baseScore * 0.7 : baseScore
 
     return { score: score, journeyPending: journeyPending }
+  },
+
+  // Calcula membersNeeded para um squad e jogador (extração para reutilização no loop)
+  _membersNeeded: function(squad, player) {
+    var needed = []
+    squad.members.forEach(function(uid) {
+      var relic    = squadFarmEngine._playerRelicFor(player, uid, squad.isFleet ? squad.minRelic : 0)
+      var meetsMin = squad.isFleet ? relic === 99 : relic >= squad.minRelic
+      if (!meetsMin) {
+        if (squad.isFleet && relic >= 0 && relic < 99) {
+          var pilotId  = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[uid] : null
+          var shipUnit = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
+          var hasShip  = shipUnit && (shipUnit.rarity || 0) >= 7
+          if (hasShip && pilotId) {
+            needed.push({
+              unitId: pilotId, id: pilotId,
+              name:   (typeof getUnitName === 'function') ? getUnitName(pilotId) : pilotId,
+              current: 'R' + relic, target: 'R' + squad.minRelic,
+              isPilot: true,
+              shipName: (typeof getUnitName === 'function') ? getUnitName(uid) : uid
+            })
+          } else if (!hasShip) {
+            needed.push({
+              unitId: uid, id: uid,
+              name:   (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
+              current: relic < 0 ? 'não tem' : (relic + '★'), target: '7★',
+              isShip: true
+            })
+          }
+        } else {
+          var relicStr = relic < 0 ? 'não tem'
+            : squad.isFleet ? (relic + '★') : 'R' + relic
+          needed.push({
+            unitId: uid, id: uid,
+            name:   (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
+            current: relicStr,
+            target:  squad.isFleet ? '7★' : 'R' + squad.minRelic,
+            isShip:  squad.isFleet && relic < 0
+          })
+        }
+      }
+    })
+    return needed
   },
 
   // Gera recomendações para todos os jogadores ativos
@@ -258,60 +305,28 @@ var squadFarmEngine = {
 
       if (scored.length === 0) return
 
-      var best          = scored[0].squad
-      var journeyPending = scored[0].journeyPending
-      var cov           = squadFarmEngine._squadCoverage(best, player)
-
-      // Membros do squad que ainda precisam farmar
-      var membersNeeded = []
-      best.members.forEach(function(uid) {
-        var relic    = squadFarmEngine._playerRelicFor(player, uid, best.isFleet ? best.minRelic : 0)
-        var meetsMin = best.isFleet ? relic === 99 : relic >= best.minRelic
-        if (!meetsMin) {
-          if (best.isFleet && relic >= 0 && relic < 99) {
-            // Nave em 7★ mas piloto fraco: indicar o piloto como o que precisa de upgrade
-            var pilotId = (typeof SHIP_PILOT !== 'undefined') ? SHIP_PILOT[uid] : null
-            var shipUnit = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
-            var hasShip = shipUnit && (shipUnit.rarity || 0) >= 7
-            if (hasShip && pilotId) {
-              // Nave ok, piloto fraco — adicionar o piloto como pendência
-              membersNeeded.push({
-                unitId:   pilotId,
-                id:       pilotId,
-                name:     (typeof getUnitName === 'function') ? getUnitName(pilotId) : pilotId,
-                current:  'R' + relic,
-                target:   'R' + best.minRelic,
-                isPilot:  true,
-                shipName: (typeof getUnitName === 'function') ? getUnitName(uid) : uid
-              })
-            } else if (!hasShip) {
-              // Nave não tem 7★
-              membersNeeded.push({
-                unitId:  uid,
-                id:      uid,
-                name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
-                current: relic < 0 ? 'não tem' : (relic + '★'),
-                target:  '7★',
-                isShip:  true
-              })
-            }
-          } else {
-            var relicStr = relic < 0 ? 'não tem'
-              : best.isFleet ? (relic + '★') : 'R' + relic
-            membersNeeded.push({
-              unitId:  uid,
-              id:      uid,
-              name:    (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
-              current: relicStr,
-              target:  best.isFleet ? '7★' : 'R' + best.minRelic,
-              isShip:  best.isFleet && relic < 0
-            })
+      // Percorre squads por ordem de score até encontrar um que ainda precise de farm
+      var found = null
+      for (var si = 0; si < scored.length; si++) {
+        var candidate = scored[si]
+        var membersNeeded = squadFarmEngine._membersNeeded(candidate.squad, player)
+        if (membersNeeded.length > 0) {
+          found = {
+            squad:          candidate.squad,
+            journeyPending: candidate.journeyPending,
+            membersNeeded:  membersNeeded
           }
+          break
         }
-      })
+      }
 
-      // Squad completo: nada a farmar — não incluir na lista
-      if (membersNeeded.length === 0) return
+      // Todos os squads deste jogador já estão completos — nada a recomendar
+      if (!found) return
+
+      var best           = found.squad
+      var journeyPending = found.journeyPending
+      var membersNeeded  = found.membersNeeded
+      var cov            = squadFarmEngine._squadCoverage(best, player)
 
       results.push({
         player:         player,
