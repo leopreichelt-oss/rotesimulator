@@ -305,10 +305,25 @@ var squadFarmEngine = {
 
       if (scored.length === 0) return
 
-      // Percorre squads por ordem de score até encontrar um que ainda precise de farm
+      // Monta o conjunto de membros já "comprometidos" em squads completos.
+      // Squads completos não precisam de farm, mas seus membros estão alocados —
+      // nenhum outro squad pode usar esses membros como líder (evita recomendar
+      // Padmé squad quando JMK está completo, pois Padmé é membro do JMK).
+      var completedMembers = {}
+      SQUAD_META.forEach(function(sq) {
+        if (squadFarmEngine._membersNeeded(sq, player).length === 0) {
+          sq.members.forEach(function(uid) { completedMembers[uid] = true })
+        }
+      })
+
+      // Percorre squads por ordem de score até encontrar um que:
+      //   (a) ainda precise de farm
+      //   (b) cujo líder não esteja comprometido em um squad completo
       var found = null
       for (var si = 0; si < scored.length; si++) {
         var candidate = scored[si]
+        // Líder comprometido em squad mais forte — pular
+        if (candidate.squad.leader && completedMembers[candidate.squad.leader]) continue
         var membersNeeded = squadFarmEngine._membersNeeded(candidate.squad, player)
         if (membersNeeded.length > 0) {
           found = {
