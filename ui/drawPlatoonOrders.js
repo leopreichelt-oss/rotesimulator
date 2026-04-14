@@ -76,7 +76,9 @@ function _buildPlatoonOrders(phase) {
   })
 
   // Construir ordens por jogador
-  var playerOrders = {}  // playerId → { playerName, assignments[], countByPlanet{} }
+  // playerId → { playerName, assignments[], countByPlanet{}, usedUnits{} }
+  // usedUnits: unitId → true — cada personagem pode ser alocado apenas 1x por fase
+  var playerOrders = {}
 
   var planetNames = Object.keys(planetConfigs)
     .sort(function(a, b) {
@@ -106,13 +108,18 @@ function _buildPlatoonOrders(phase) {
 
         if (!playerOrders[slot.playerId]) {
           playerOrders[slot.playerId] = {
-            playerName:   slot.playerName,
-            assignments:  [],
-            countByPlanet: {}
+            playerName:    slot.playerName,
+            assignments:   [],
+            countByPlanet: {},
+            usedUnits:     {}   // unitId → true: controle de duplicatas por fase
           }
         }
 
         var po = playerOrders[slot.playerId]
+
+        // Cada personagem só pode ser alocado 1 vez por fase
+        if (po.usedUnits[slot.unitId]) return
+
         po.countByPlanet[planetName] = po.countByPlanet[planetName] || 0
         if (po.countByPlanet[planetName] >= 10) return  // max 10 por planeta
 
@@ -120,6 +127,7 @@ function _buildPlatoonOrders(phase) {
         var relicLabel = isShip ? '7★' : 'R' + slot.relic
         var unitName   = (typeof getUnitName === 'function') ? getUnitName(slot.unitId) : slot.unitId
 
+        po.usedUnits[slot.unitId] = true
         po.assignments.push({
           planet:        planetName,
           planetTag:     config.tag,
