@@ -194,6 +194,15 @@ var squadFarmEngine = {
     var squadLeagueIdx = squadFarmEngine.leagueIndex(squad.leagueMin)
     if (squadLeagueIdx > leagueIdx + 1) return { score: -1, journeyPending: null }
 
+    // skipIfPlayerHas: descartar este variant se o jogador já tem esses personagens
+    // no minRelic do squad — indica que um variant mais forte está disponível
+    if (squad.skipIfPlayerHas) {
+      for (var ski = 0; ski < squad.skipIfPlayerHas.length; ski++) {
+        var skipRelic = squadFarmEngine._playerRelicFor(player, squad.skipIfPlayerHas[ski])
+        if (skipRelic >= squad.minRelic) return { score: -1, journeyPending: null }
+      }
+    }
+
     // ── Filtro de jornada ─────────────────────────────────────────────────
     var journeyPending = null
     if (squad.journeyUnit) {

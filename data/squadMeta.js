@@ -300,16 +300,54 @@ var SQUAD_META = [
   // ══════════════════════════════════════════════════════════════════════
   // LIGHT SIDE — requerem jornada/GL
   // ══════════════════════════════════════════════════════════════════════
+  // GL Rey — 4 variants em cadeia de upgrade
+  // skipIfPlayerHas: descarta o variant quando personagem do próximo tier já está relicado
   {
-    id: 'gl_rey',
+    id: 'gl_rey_base',
     name: 'GL Rey + Resistência',
     leader: 'GLREY',
-    members: ['GLREY', 'FINN', 'ROSE', 'REYJEDITRAINING', 'BB8'],
+    members: ['GLREY', 'EPIXFINN', 'EPIXPOE', 'AMILYNHOLDO', 'L3_37'],
     minRelic: 5, idealRelic: 8,
     journeyUnit: 'GLREY', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'LS', leagueMin: 'CHROMIUM',
-    note: 'GL — requer jornada heroica longa. Dominante quando disponível.'
+    skipIfPlayerHas: ['BENSOLO'],
+    note: 'Squad base. L3-37 sai quando Ben Solo estiver relicado.'
+  },
+  {
+    id: 'gl_rey_ben',
+    name: 'GL Rey + Ben Solo',
+    leader: 'GLREY',
+    members: ['GLREY', 'EPIXFINN', 'EPIXPOE', 'AMILYNHOLDO', 'BENSOLO'],
+    minRelic: 5, idealRelic: 8,
+    journeyUnit: 'GLREY', minJourneyStars: 7,
+    events: { rote: true, gac: true, tw: true },
+    alignment: 'LS', leagueMin: 'CHROMIUM',
+    skipIfPlayerHas: ['EZRABRIDGERS3'],
+    note: 'Ben Solo > L3-37. Upgrade para variant com Ezra quando disponível.'
+  },
+  {
+    id: 'gl_rey_ben_ezra',
+    name: 'GL Rey + Ben Solo + Ezra',
+    leader: 'GLREY',
+    members: ['GLREY', 'BENSOLO', 'EZRABRIDGERS3', 'CALKESTIS', 'EPIXFINN'],
+    minRelic: 5, idealRelic: 8,
+    journeyUnit: 'GLREY', minJourneyStars: 7,
+    events: { rote: true, gac: true, tw: true },
+    alignment: 'LS', leagueMin: 'CHROMIUM',
+    skipIfPlayerHas: ['BARRISSOFFEE'],
+    note: 'Ezra Bridger + Cal Kestis elevam muito o desempenho. Adicionar Barriss quando disponível.'
+  },
+  {
+    id: 'gl_rey_ben_ezra_barriss',
+    name: 'GL Rey + Ben Solo + Ezra + Barriss',
+    leader: 'GLREY',
+    members: ['GLREY', 'BENSOLO', 'EZRABRIDGERS3', 'CALKESTIS', 'BARRISSOFFEE'],
+    minRelic: 5, idealRelic: 8,
+    journeyUnit: 'GLREY', minJourneyStars: 7,
+    events: { rote: true, gac: true, tw: true },
+    alignment: 'LS', leagueMin: 'CHROMIUM',
+    note: 'Squad completo — Barriss Offee maximiza o desempenho de Rey+Ben+Cal.'
   },
   {
     id: 'gl_luke',
