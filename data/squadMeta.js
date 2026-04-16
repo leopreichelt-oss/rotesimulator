@@ -175,19 +175,19 @@ var SQUAD_META = [
     journeyUnit: 'SUPREMELEADERKYLOREN', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'DS', leagueMin: 'CHROMIUM',
-    skipIfPlayerHas: ['REYULTIMATE'],
-    note: 'GL — squad base. Rey (Visão Lado Sombrio) substitui Sith Trooper quando disponível.'
+    skipIfPlayerHas: ['DARKREY'],
+    note: 'GL — squad base. Rey (Visão do Lado Sombrio) substitui Sith Trooper quando disponível.'
   },
   {
     id: 'slkr_rey',
     name: 'Líder Supremo Kylo Ren + Rey (LS)',
     leader: 'SUPREMELEADERKYLOREN',
-    members: ['SUPREMELEADERKYLOREN', 'GENERALHUX', 'FIRSTORDEROFFICER', 'FIRSTORDERSTORMTROOPER', 'REYULTIMATE'],
+    members: ['SUPREMELEADERKYLOREN', 'GENERALHUX', 'FIRSTORDEROFFICER', 'FIRSTORDERSTORMTROOPER', 'DARKREY'],
     minRelic: 5, idealRelic: 8,
     journeyUnit: 'SUPREMELEADERKYLOREN', minJourneyStars: 7,
     events: { rote: true, gac: true, tw: true },
     alignment: 'DS', leagueMin: 'CHROMIUM',
-    note: 'Rey (Visão do Lado Sombrio) substitui Sith Trooper. ⚠ Verificar ID: REYULTIMATE = "Rey (Lenda Galáctica)" no jogo.'
+    note: 'Rey (Visão do Lado Sombrio) substitui Sith Trooper. Categorias: Primeira Ordem + Sith.'
   },
 
   {
