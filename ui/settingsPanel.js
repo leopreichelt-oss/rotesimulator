@@ -487,6 +487,20 @@ function syncGuild() {
             rosterEngine.saveAccount(allycode, guildNameForAccount)
           }
 
+          // Persistir guildId e memberLevel para sync com servidor
+          if (settingsState.guildData) {
+            var gid    = settingsState.guildData.guildId
+            var mlevel = settingsState.guildData.myMemberLevel || 1
+            if (gid) {
+              localStorage.setItem('rote_guild_id_' + allycode, gid)
+              localStorage.setItem('rote_member_level_' + allycode, mlevel)
+            }
+            // Oficial/líder: salvar estratégia atual no servidor
+            if (mlevel >= 3 && typeof saveStrategyToServer === 'function') {
+              saveStrategyToServer()
+            }
+          }
+
           setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
           setTimeout(function() {
             var progress = document.getElementById('syncProgress')

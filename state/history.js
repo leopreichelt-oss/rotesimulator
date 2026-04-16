@@ -3,6 +3,79 @@ function _historyKey(){
   return ac ? ('roteHistory_' + ac) : 'roteHistory'
 }
 
+// ── Sync com servidor ──────────────────────────────────────────────────────
+
+function _getGuildId() {
+  var ac = localStorage.getItem('rote_allycode') || ''
+  return ac ? (localStorage.getItem('rote_guild_id_' + ac) || null) : null
+}
+
+function _getMemberLevel() {
+  var ac = localStorage.getItem('rote_allycode') || ''
+  return ac ? Number(localStorage.getItem('rote_member_level_' + ac) || 1) : 1
+}
+
+// Salva o histórico local no servidor (só oficiais/líderes)
+function saveStrategyToServer() {
+  var guildId  = _getGuildId()
+  var allycode = localStorage.getItem('rote_allycode')
+  if (!guildId || !allycode) return
+  if (_getMemberLevel() < 3) return  // apenas oficial ou líder
+
+  var history = getROTEHistory()
+  fetch(COMLINK_URL + '/guild-strategy', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ guildId: guildId, allycode: allycode, history: history })
+  }).catch(function() {})  // falha silenciosa — não bloqueia o usuário
+}
+
+var _serverSaveTimer = null
+function debouncedServerSave() {
+  clearTimeout(_serverSaveTimer)
+  _serverSaveTimer = setTimeout(saveStrategyToServer, 3000)
+}
+
+// Busca estratégia do servidor e chama callback({ history, lastUpdated, updatedBy }) ou null
+function loadStrategyFromServer(callback) {
+  var guildId = _getGuildId()
+  if (!guildId) { if (callback) callback(null); return }
+
+  fetch(COMLINK_URL + '/guild-strategy?guildId=' + encodeURIComponent(guildId))
+    .then(function(r) { return r.json() })
+    .then(function(data) { if (callback) callback(data) })
+    .catch(function()   { if (callback) callback(null)  })
+}
+
+// Mescla dados do servidor com histórico local.
+// Para membros (nível < 3): sempre usa servidor.
+// Para oficiais: usa servidor apenas se for mais recente que o local.
+// Retorna true se o histórico local foi atualizado.
+function mergeServerStrategy(serverData) {
+  if (!serverData || !serverData.history || !serverData.history.length) return false
+
+  var memberLevel  = _getMemberLevel()
+  var localHistory = getROTEHistory()
+
+  // Timestamp do dado mais recente no servidor
+  var serverTs = serverData.lastUpdated ? new Date(serverData.lastUpdated).getTime() : 0
+
+  // Timestamp do evento mais recente no histórico local
+  var localTs = 0
+  if (localHistory.length) {
+    var newest = localHistory[0]
+    var ts = newest.closedAt || newest.startTime
+    if (ts) localTs = new Date(ts).getTime()
+  }
+
+  // Membros usam sempre o servidor; oficiais só se servidor for mais recente
+  if (memberLevel < 3 || serverTs > localTs) {
+    saveROTEHistory(serverData.history)
+    return true
+  }
+  return false
+}
+
 // ----------------------
 // LER / SALVAR HISTÓRICO
 // ----------------------
@@ -73,6 +146,9 @@ function handleBriefing(){
 
   drawROTEHistory()
 
+  // Salvar no servidor (debounced — apenas oficiais)
+  debouncedServerSave()
+
 }
 
 // ----------------------
@@ -110,6 +186,9 @@ function updateROTEResult(phase, field, value){
 
   saveROTEHistory(history)
 
+  // Salvar no servidor (debounced — apenas oficiais)
+  debouncedServerSave()
+
 }
 
 // ----------------------
@@ -146,6 +225,28 @@ function drawROTEHistory(){
   if(!container) return
 
   container.innerHTML = ""
+
+  // Botão para buscar estratégia do servidor manualmente
+  if (_getGuildId()) {
+    let syncBtn = document.createElement("button")
+    syncBtn.title = "Carregar estratégia da guilda do servidor"
+    syncBtn.innerText = "🌐"
+    syncBtn.style.cssText = "font-size:13px;padding:2px 7px;"
+    syncBtn.onclick = function() {
+      syncBtn.disabled = true
+      syncBtn.innerText = "⏳"
+      loadStrategyFromServer(function(serverData) {
+        if (mergeServerStrategy(serverData)) {
+          drawROTEHistory()
+          loadCurrentROTE()
+          calculate()
+        }
+        syncBtn.disabled = false
+        syncBtn.innerText = "🌐"
+      })
+    }
+    container.appendChild(syncBtn)
+  }
 
   if(!history.length) return
 

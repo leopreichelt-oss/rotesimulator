@@ -44,6 +44,18 @@ window.onload = function(){
   if (typeof drawPlatoonList === 'function') drawPlatoonList()
   if (typeof drawFarmCritical === 'function') drawFarmCritical()
 
+  // Tentar carregar estratégia do servidor (não bloqueia — atualiza se servidor for mais recente)
+  if (typeof loadStrategyFromServer === 'function') {
+    loadStrategyFromServer(function(serverData) {
+      if (typeof mergeServerStrategy === 'function' && mergeServerStrategy(serverData)) {
+        // Servidor tinha dados mais recentes — redesenhar histórico e fases
+        drawROTEHistory()
+        if (typeof loadCurrentROTE === 'function') loadCurrentROTE()
+        calculate()
+      }
+    })
+  }
+
   // Mostrar landing ou ir direto ao último modo usado
   var lastMode = localStorage.getItem('rote_lastMode')
   if (lastMode === 'ROTE') {

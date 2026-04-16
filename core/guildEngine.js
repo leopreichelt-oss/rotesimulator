@@ -19,8 +19,9 @@ var guildEngine = {
     })
     .then(function(r) { return r.json() })
     .then(function(player) {
-      var guildId = player.guildId
-      var guildName = player.guildName
+      var guildId    = player.guildId
+      var guildName  = player.guildName
+      var myPlayerId = player.playerId  // usado para identificar o nível do usuário na guilda
 
       if (!guildId) return callback('Jogador não está em uma guilda')
 
@@ -41,19 +42,26 @@ var guildEngine = {
           var lat = m.lastActivityTime ? Number(m.lastActivityTime) : null
           if (lat && lat < 1e12) lat = lat * 1000  // normalizar para ms
           return {
-            name: m.playerName,
-            playerId: m.playerId,
-            gp: Number(m.galacticPower) || 0,
-            lastActivityTime: lat
+            name:             m.playerName,
+            playerId:         m.playerId,
+            gp:               Number(m.galacticPower) || 0,
+            lastActivityTime: lat,
+            memberLevel:      Number(m.memberLevel) || 1  // 1=membro 2=veterano 3=oficial 4=líder
           }
         })
 
+        // Nível do usuário que fez o sync
+        var myMember      = members.find(function(m) { return m.playerId === myPlayerId })
+        var myMemberLevel = myMember ? (myMember.memberLevel || 1) : 1
+
         callback(null, {
-          guildId: guildId,
-          guildName: profile.name || guildName,
-          totalGP: totalGP,
-          playerCount: memberCount,
-          members: members
+          guildId:       guildId,
+          guildName:     profile.name || guildName,
+          totalGP:       totalGP,
+          playerCount:   memberCount,
+          members:       members,
+          myPlayerId:    myPlayerId,
+          myMemberLevel: myMemberLevel   // 3+ = oficial/líder → pode editar estratégia
         })
       })
     })
