@@ -107,13 +107,24 @@ ${carryWarning}
 ${gapText ? `<div class="phaseGap">${gapText}</div>` : ""}
 
 <div class="phaseResult">
-Resultado real
-<input
-type="number"
-id="realPhase${phase}"
-${state.historyMode ? "disabled" : ""}
-onchange="updateROTEResult(${phase}, this.value); calculate();"
-oninput="updateROTEResult(${phase}, this.value);">
+  <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;">
+    <span>★ Estrelas reais</span>
+    <input
+      type="number" min="0" max="6" style="width:52px;"
+      id="realPhaseStars${phase}"
+      ${state.historyMode ? "disabled" : ""}
+      onchange="updateROTEResult(${phase}, 'stars', this.value); calculate();"
+      oninput="updateROTEResult(${phase}, 'stars', this.value);">
+  </label>
+  <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;margin-top:4px;">
+    <span>↪ Pré-carregamento</span>
+    <input
+      type="number" style="width:90px;"
+      id="realPhase${phase}"
+      ${state.historyMode ? "disabled" : ""}
+      onchange="updateROTEResult(${phase}, 'carry', this.value); calculate();"
+      oninput="updateROTEResult(${phase}, 'carry', this.value);">
+  </label>
 </div>
 
 <div class="phaseActions">

@@ -32,8 +32,10 @@ function handleBriefing(){
 
   let history = getROTEHistory()
 
-  // descartar evento atual se F6 não preenchida
-  if(history.length && !history[0]?.results?.[6]){
+  // descartar evento atual se F6 carry não preenchida
+  let r6 = history[0]?.results?.[6]
+  let f6done = typeof r6 === 'object' ? r6?.carry != null : !!r6
+  if(history.length && !f6done){
     history.shift()
   }
 
@@ -77,7 +79,8 @@ function handleBriefing(){
 // ATUALIZAR RESULTADO REAL
 // ----------------------
 
-function updateROTEResult(phase, value){
+// field = 'stars' | 'carry'
+function updateROTEResult(phase, field, value){
 
   let history = getROTEHistory()
   if(!history.length) return
@@ -89,10 +92,19 @@ function updateROTEResult(phase, value){
   }
 
   history[0].results = history[0].results || {}
-  history[0].results[phase] = Number(value)
 
-  // se F6 preenchida, fechar evento
-  if(history[0].results[6]){
+  // migração retrocompatível: formato antigo era número (carry)
+  let existing = history[0].results[phase]
+  if(typeof existing === 'number'){
+    history[0].results[phase] = { carry: existing }
+  } else if(!existing){
+    history[0].results[phase] = {}
+  }
+
+  history[0].results[phase][field] = value !== '' ? Number(value) : null
+
+  // fechar evento quando pré-carregamento da F6 preenchido
+  if(history[0].results[6] && history[0].results[6].carry != null){
     history[0].closedAt = new Date().toISOString()
   }
 
@@ -110,8 +122,15 @@ function loadROTEResults(){
   if(!active || !active.results) return
 
   Object.keys(active.results).forEach(phase => {
-    let input = document.getElementById("realPhase" + phase)
-    if(input) input.value = active.results[phase]
+    let result = active.results[phase]
+    // compat: formato antigo era número (carry)
+    let stars = typeof result === 'object' ? (result.stars ?? '') : ''
+    let carry = typeof result === 'object' ? (result.carry ?? '') : (result ?? '')
+
+    let starsInput = document.getElementById("realPhaseStars" + phase)
+    let carryInput = document.getElementById("realPhase" + phase)
+    if(starsInput) starsInput.value = stars
+    if(carryInput) carryInput.value = carry
   })
 
 }
@@ -175,7 +194,8 @@ function _buildTrendChart(events){
   // Descobrir o max de estrelas por fase para escala
   let maxStars = 1
   events.forEach(e => PHASES.forEach(ph => {
-    let v = Number(e.results[ph] || 0)
+    let r = e.results[ph]
+    let v = typeof r === 'object' ? (r?.stars || 0) : 0
     if(v > maxStars) maxStars = v
   }))
   // Arredondar para próximo múltiplo de 5 para eixo limpo
@@ -239,7 +259,8 @@ function _buildTrendChart(events){
   events.forEach((evt, ei) => {
     let color   = COLORS[Math.min(ei, COLORS.length - 1) + (COLORS.length - events.length)]
     let points  = PHASES.map((ph, i) => {
-      let v = Number(evt.results[ph] || 0)
+      let r = evt.results[ph]
+      let v = typeof r === 'object' ? (r?.stars || 0) : 0
       let x = PAD_L + i * xStep
       let y = PAD_T + plotH - (v / maxStars) * plotH
       return { x, y, v }
@@ -325,16 +346,22 @@ function loadCurrentROTE(){
     }
   })
 
-  // limpar resultados reais
+  // limpar e restaurar resultados reais (estrelas + carry)
   for(let phase = 1; phase <= 6; phase++){
-    let input = document.getElementById("realPhase" + phase)
-    if(input) input.value = ""
+    let si = document.getElementById("realPhaseStars" + phase)
+    let ci = document.getElementById("realPhase" + phase)
+    if(si) si.value = ""
+    if(ci) ci.value = ""
   }
 
-  // restaurar resultados reais salvos
   Object.keys(entry.results || {}).forEach(phase => {
-    let input = document.getElementById("realPhase" + phase)
-    if(input) input.value = entry.results[phase]
+    let result = entry.results[phase]
+    let stars = typeof result === 'object' ? (result.stars ?? '') : ''
+    let carry = typeof result === 'object' ? (result.carry ?? '') : (result ?? '')
+    let si = document.getElementById("realPhaseStars" + phase)
+    let ci = document.getElementById("realPhase" + phase)
+    if(si) si.value = stars
+    if(ci) ci.value = carry
   })
 
   calculate()
@@ -367,15 +394,22 @@ function loadHistoryROTE(index){
     }
   })
 
-  // limpar e restaurar resultados reais
+  // limpar e restaurar resultados reais (estrelas + carry)
   for(let phase = 1; phase <= 6; phase++){
-    let input = document.getElementById("realPhase" + phase)
-    if(input) input.value = ""
+    let si = document.getElementById("realPhaseStars" + phase)
+    let ci = document.getElementById("realPhase" + phase)
+    if(si) si.value = ""
+    if(ci) ci.value = ""
   }
 
   Object.keys(entry.results || {}).forEach(phase => {
-    let input = document.getElementById("realPhase" + phase)
-    if(input) input.value = entry.results[phase]
+    let result = entry.results[phase]
+    let stars = typeof result === 'object' ? (result.stars ?? '') : ''
+    let carry = typeof result === 'object' ? (result.carry ?? '') : (result ?? '')
+    let si = document.getElementById("realPhaseStars" + phase)
+    let ci = document.getElementById("realPhase" + phase)
+    if(si) si.value = stars
+    if(ci) ci.value = carry
   })
 
   calculate()
