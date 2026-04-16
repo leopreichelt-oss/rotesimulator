@@ -117,21 +117,27 @@ node.onclick = function(e){
   let box = document.getElementById("planetFloatBox")
   box.style.display = "block"
 
-  let left = nodeRect.left - mapRect.left + nodeRect.width + 8
-  let top = nodeRect.top - mapRect.top
+  // Em mobile (≤860px) o CSS posiciona o box como modal centrado via fixed —
+  // não definir left/top via JS para não sobrescrever o transform do CSS
+  if(window.innerWidth > 860){
+    let left = nodeRect.left - mapRect.left + nodeRect.width + 8
+    let top  = nodeRect.top  - mapRect.top
 
-  // evitar sair pela direita
-  if(left + 230 > mapRect.width){
-    left = nodeRect.left - mapRect.left - 238
+    // evitar sair pela direita
+    if(left + 250 > mapRect.width){
+      left = nodeRect.left - mapRect.left - 258
+    }
+    // evitar sair por baixo
+    if(top + 300 > mapRect.height){
+      top = Math.max(0, mapRect.height - 300)
+    }
+
+    box.style.left = left + "px"
+    box.style.top  = top  + "px"
+  } else {
+    box.style.left = ""
+    box.style.top  = ""
   }
-
-  // evitar sair por baixo
-  if(top + 260 > mapRect.height){
-    top = mapRect.height - 260
-  }
-
-  box.style.left = left + "px"
-  box.style.top = top + "px"
 }
 
 layer.appendChild(node)

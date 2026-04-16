@@ -325,9 +325,9 @@ background:#1e293b;
 border:1px solid #475569;
 border-radius:8px;
 padding:10px;
-min-width:110px;
-max-width:130px;
-z-index:100;
+min-width:200px;
+max-width:240px;
+z-index:200;
 display:none;
 box-shadow:0 4px 20px rgba(0,0,0,0.5);
 }
@@ -470,4 +470,90 @@ color:white;
   background: #0f172a;
   padding: 4px 10px;
   border-top: 1px solid #334155;
+}
+
+/* ── Responsivo: mobile / tablet ──────────────────────────────────── */
+@media (max-width: 860px) {
+
+  /* Permite scroll vertical em vez de cortar a tela */
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  header {
+    gap: 8px;
+    padding: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 300;
+  }
+
+  /* Empilha as 3 colunas verticalmente */
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .left {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    border-right: none;
+    border-bottom: 2px solid #334155;
+  }
+
+  .map {
+    height: auto;
+    overflow-y: visible;
+    padding: 4px;
+  }
+
+  .right {
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    overflow-y: visible;
+    border-left: none;
+    border-top: 2px solid #334155;
+  }
+
+  /* Planetas escalam proporcionalmente com a tela */
+  .planetNode {
+    width: clamp(26px, 7.5vw, 52px);
+    height: clamp(26px, 7.5vw, 52px);
+    font-size: clamp(7px, 1.8vw, 10px);
+    padding: 2px;
+  }
+
+  /* Estrelas logo abaixo do nó escalado */
+  .starContainer {
+    top: clamp(24px, 7vw, 46px);
+  }
+
+  /* Float box vira modal centrado na tela — sai do contexto do mapa */
+  #planetFloatBox {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    min-width: 280px;
+    max-width: 92vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    z-index: 1000 !important;
+  }
+
+  /* Header compacto: campos em linha única com scroll horizontal se precisar */
+  #simHeaderFields {
+    grid-template-columns: repeat(3, auto);
+    gap: 3px 10px;
+  }
+
+  #simHeaderFields input {
+    width: 72px;
+  }
 }
