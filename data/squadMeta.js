@@ -164,6 +164,32 @@ var SQUAD_META = [
   // ══════════════════════════════════════════════════════════════════════
   // DARK SIDE — requerem jornada/GL
   // ══════════════════════════════════════════════════════════════════════
+
+  // SLKR — 2 variants: base e com Rey (Visão do Lado Sombrio)
+  {
+    id: 'slkr_base',
+    name: 'Líder Supremo Kylo Ren (FO)',
+    leader: 'SUPREMELEADERKYLOREN',
+    members: ['SUPREMELEADERKYLOREN', 'GENERALHUX', 'FIRSTORDEROFFICER', 'FIRSTORDERSTORMTROOPER', 'SITHTROOPER'],
+    minRelic: 5, idealRelic: 8,
+    journeyUnit: 'SUPREMELEADERKYLOREN', minJourneyStars: 7,
+    events: { rote: true, gac: true, tw: true },
+    alignment: 'DS', leagueMin: 'CHROMIUM',
+    skipIfPlayerHas: ['REYULTIMATE'],
+    note: 'GL — squad base. Rey (Visão Lado Sombrio) substitui Sith Trooper quando disponível.'
+  },
+  {
+    id: 'slkr_rey',
+    name: 'Líder Supremo Kylo Ren + Rey (LS)',
+    leader: 'SUPREMELEADERKYLOREN',
+    members: ['SUPREMELEADERKYLOREN', 'GENERALHUX', 'FIRSTORDEROFFICER', 'FIRSTORDERSTORMTROOPER', 'REYULTIMATE'],
+    minRelic: 5, idealRelic: 8,
+    journeyUnit: 'SUPREMELEADERKYLOREN', minJourneyStars: 7,
+    events: { rote: true, gac: true, tw: true },
+    alignment: 'DS', leagueMin: 'CHROMIUM',
+    note: 'Rey (Visão do Lado Sombrio) substitui Sith Trooper. ⚠ Verificar ID: REYULTIMATE = "Rey (Lenda Galáctica)" no jogo.'
+  },
+
   {
     id: 'jk_revan',
     name: 'Cavaleiro Jedi Revan (KOTOR)',
