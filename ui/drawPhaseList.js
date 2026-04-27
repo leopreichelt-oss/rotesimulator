@@ -136,6 +136,17 @@ Roteiro
 📋 Ordens
 </button>
 
+<button onclick="openDeployModal(${phase})" title="Rastrear deploy de platoons desta fase" id="deployBtn${phase}">
+${(function(){
+  if(typeof deployTracker === 'undefined') return '🚀 Deploy'
+  var phasePlanets = getPlanetsOfPhase(phase)
+  var prog = deployTracker.getProgress(phasePlanets)
+  if(prog.total === 0) return '🚀 Deploy'
+  var color = prog.done === prog.total ? '#4ade80' : prog.done > 0 ? '#facc15' : '#94a3b8'
+  return '🚀 Deploy <span style="font-size:10px;color:' + color + ';">(' + prog.done + '/' + prog.total + ')</span>'
+})()}
+</button>
+
 <span class="phaseToggle"
 onclick="togglePhaseDetails(${phase}, this)">
 ▸ detalhes técnicos

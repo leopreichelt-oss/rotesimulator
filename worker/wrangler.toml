@@ -1,0 +1,8 @@
+# wrangler.toml — Cloudflare Worker: ROTE Planner backend
+name = "worker-lively-heart-f0a0"
+main = "index.js"
+compatibility_date = "2024-05-01"
+
+[[kv_namespaces]]
+binding = "STRATEGY_KV"
+id      = "3cc730622fd940e1a4aea90134e773e9"

@@ -4,22 +4,34 @@ function showLanding() {
   var landing = document.getElementById('landingPage')
   var header  = document.querySelector('header')
   var app     = document.querySelector('.container')
+  var gacPage = document.getElementById('gacPage')
   if (landing) landing.style.display = 'block'
   if (header)  header.style.display  = 'none'
   if (app)     app.style.display     = 'none'
+  if (gacPage) gacPage.style.display = 'none'
+  localStorage.removeItem('rote_lastMode')
 }
 
 function selectMode(mode) {
   localStorage.setItem('rote_lastMode', mode)
+  var landing = document.getElementById('landingPage')
+  var header  = document.querySelector('header')
+  var app     = document.querySelector('.container')
+  var gacPage = document.getElementById('gacPage')
+
+  // Ocultar tudo primeiro
+  if (landing) landing.style.display = 'none'
+  if (gacPage) gacPage.style.display = 'none'
+
   if (mode === 'ROTE') {
-    var landing = document.getElementById('landingPage')
-    var header  = document.querySelector('header')
-    var app     = document.querySelector('.container')
-    if (landing) landing.style.display = 'none'
-    if (header)  header.style.display  = ''
-    if (app)     app.style.display     = ''
+    if (header) header.style.display = ''
+    if (app)    app.style.display    = ''
+  } else if (mode === 'GAC') {
+    if (header) header.style.display = 'none'
+    if (app)    app.style.display    = 'none'
+    if (typeof showGACPanel === 'function') showGACPanel()
   }
-  // TW e GAC: módulos futuros — não fazem nada por enquanto
+  // TW: módulo futuro
 }
 
 // ── Inicialização ──────────────────────────────────────────────────────────

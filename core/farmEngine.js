@@ -27,6 +27,12 @@ var farmEngine = {
   PLANET_HISTORY_KEY: 'rote_farm_planet_history_v1',
   PLANET_LIMIT: 10,
 
+  // Personagens de farm lento: eventos mensais, ~20 fragmentos/mês, 330 total (~16 meses)
+  // Sugestão: não atribuir como farm principal — recomendar farm paralelo de fragmentos
+  SLOW_FARM_UNITS: {
+    'KIADIMUNDI': true  // GET3 / Geonosis TB
+  },
+
   _key: function(base) {
     var ac = localStorage.getItem('rote_allycode') || ''
     return ac ? (base + '_' + ac) : base
@@ -75,6 +81,12 @@ var farmEngine = {
       }
     })
     return max
+  },
+
+  // Estrelas (rarity) de um jogador para uma unidade (0 = não tem)
+  _playerStarFor: function(player, unitId) {
+    var unit = player.units && player.units.find(function(u) { return u.base_id === unitId })
+    return unit ? unit.rarity : 0
   },
 
   // Nível de relic atual de um jogador para uma unidade (-1 = não tem)
@@ -128,18 +140,25 @@ var farmEngine = {
 
       // Montar lista de candidatos (quem ainda NÃO atende o requisito)
       var gp = gpMap || {}
+      var isSlowFarm = !!farmEngine.SLOW_FARM_UNITS[unitId]
       var candidates = []
       Object.values(roster).forEach(function(player) {
         var currentRelic = farmEngine._playerRelicFor(player, unitId)
         var meetsReq = currentRelic >= relicMin
         if (meetsReq) return
         var pid = player.playerId || player.name
+        // Verifica bloqueio por estrelas: tem o char mas < 7★ → não pode reliciar
+        var starCount = farmEngine._playerStarFor(player, unitId)
+        var blockedByStars = starCount > 0 && starCount < 7
         candidates.push({
           playerId: pid,
           name: player.name,
           gp: gp[pid] || player.gp || 0,
           currentRelic: currentRelic,
-          relicDiff: relicMin - Math.max(0, currentRelic)
+          relicDiff: relicMin - Math.max(0, currentRelic),
+          starCount: starCount,
+          blockedByStars: blockedByStars,
+          isSlowFarm: isSlowFarm
         })
       })
 
@@ -159,7 +178,8 @@ var farmEngine = {
         needed: needed,
         have: have,
         deficit: deficit,
-        candidates: candidates
+        candidates: candidates,
+        isSlowFarm: isSlowFarm
       })
     })
 
@@ -295,9 +315,19 @@ var farmEngine = {
     // 1. Verificar progresso dos assignments anteriores
     var progress = farmEngine.checkProgress(rosterMap)
 
-    // Players com assignment ativo (inProgress + noProgress mantêm assignment)
+    // Players com assignment ativo (inProgress mantêm assignment)
+    // Excluir: personagens lentos e bloqueados por estrelas — liberar jogador para novo assignment
+    var filteredInProgress = progress.inProgress.filter(function(p) {
+      if (farmEngine.SLOW_FARM_UNITS[p.assignment.unitId]) return false
+      var player = rosterMap[p.playerId]
+      if (player) {
+        var stars = farmEngine._playerStarFor(player, p.assignment.unitId)
+        if (stars > 0 && stars < 7) return false  // bloqueado por estrelas
+      }
+      return true
+    })
     var busyPlayerIds = {}
-    progress.inProgress.forEach(function(p) { busyPlayerIds[p.playerId] = true })
+    filteredInProgress.forEach(function(p) { busyPlayerIds[p.playerId] = true })
 
     // 2. Coletar déficits por prioridade
     var deficits = farmEngine.collectAllDeficits(rosterMap, fullRosterMap)
@@ -317,7 +347,17 @@ var farmEngine = {
     var newAssignments = {}
     var usedFreeIds = {}
 
+    // Coleta sugestões para exibição separada
+    var starBlockedSuggestions = []   // jogadores bloqueados por estrelas
+    var parallelFarmSuggestions = []  // personagens lentos com déficit
+
     deficits.forEach(function(deficit) {
+      // Farm lento: não atribuir como primário — coletar para sugestão paralela
+      if (deficit.isSlowFarm) {
+        parallelFarmSuggestions.push({ unitId: deficit.unitId, planet: deficit.planet, deficit: deficit.deficit, targetRelic: deficit.targetRelic })
+        return
+      }
+
       var slotsToFill = deficit.deficit
       var requestCount = slotsToFill + Math.ceil(slotsToFill / 3)
 
@@ -327,6 +367,21 @@ var farmEngine = {
         var pid = candidate.playerId
         if (!freePlayerIds[pid]) return
         if (usedFreeIds[pid]) return
+
+        // Bloqueado por estrelas: não pode relicar, sugerir farm de estrelas
+        if (candidate.blockedByStars) {
+          if (!starBlockedSuggestions.find(function(s) { return s.playerId === pid && s.unitId === deficit.unitId })) {
+            starBlockedSuggestions.push({
+              playerId: pid,
+              playerName: candidate.name,
+              unitId: deficit.unitId,
+              planet: deficit.planet,
+              starCount: candidate.starCount,
+              targetRelic: deficit.targetRelic
+            })
+          }
+          return
+        }
 
         // Verificar limite histórico por planeta
         var history = (planetHistory[pid] || {})[deficit.planet] || 0
@@ -357,8 +412,8 @@ var farmEngine = {
     var storedAll = farmEngine.loadAssignments()
     var finalAssignments = {}
 
-    // Manter assignments em progresso
-    progress.inProgress.forEach(function(p) {
+    // Manter assignments em progresso (exceto personagens lentos e bloqueados por estrelas)
+    filteredInProgress.forEach(function(p) {
       finalAssignments[p.playerId] = storedAll[p.playerId]
     })
 
@@ -374,7 +429,9 @@ var farmEngine = {
       noProgress: progress.noProgress,
       completed: progress.completed,
       deficits: deficits,
-      newCount: Object.keys(newAssignments).length
+      newCount: Object.keys(newAssignments).length,
+      starBlockedSuggestions: starBlockedSuggestions,
+      parallelFarmSuggestions: parallelFarmSuggestions
     }
   },
 

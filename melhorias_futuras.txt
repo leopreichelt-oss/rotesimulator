@@ -1,70 +1,50 @@
 ROTE Planner — Melhorias Futuras
 =================================
-Gerado em: 2026-04-07 / Atualizado em: 2026-04-13
-Base: commit adcaebc (multiplicadores de onda contínuos + autoGP no phaseEngine)
+Gerado em: 2026-04-07 / Atualizado em: 2026-04-22
 
 ================================================================================
 MÉDIA PRIORIDADE
 ================================================================================
 
-[8] Alocação automática de platoons (Opção A — bloqueada; Opção B implementada)
+[8] Alocação automática de platoons (Opção B concluída; Opção A pausada)
 
     SITUAÇÃO ATUAL:
-    - [CONCLUÍDO] Opção B: botão "📋 Ordens" no painel de fases gera lista por
-      jogador (nome do personagem, operação, relic) pronta para copiar e enviar
-      no Discord. Respeita regras: máx 10 unid./jogador/planeta, máx 14/15 por
-      op em planetas não-objetivo, não preenche planeta futuro se desnecessário,
-      completa na fase N+1 o que ficou faltando na fase N.
+    - [CONCLUÍDO] Opção B — Ordens manuais:
+        Botão "📋 Ordens" gera lista por jogador (personagem, operação, relic)
+        pronta para copiar e enviar no Discord.
+    - [CONCLUÍDO] Rastreamento de deploy:
+        Botão "🚀 Deploy" por fase com checkbox por operação, barra de progresso,
+        badge de progresso no painel de fases e botão "📋 Copiar pendentes".
+    - [PAUSADO] Opção A — Deploy automático no jogo.
 
-    OPÇÃO A — Alocação direta no jogo (bloqueada por falta de API):
-    - O Comlink (nosso proxy) é estritamente read-only. Não existe endpoint de
-      escrita para TB. O HotUtils e EchoBase fazem engenharia reversa do cliente
-      do jogo — fora do escopo deste projeto.
-    - Para tornar a Opção A viável seriam necessários TODOS os passos abaixo:
+    OPÇÃO A — Deploy automático (pausado, bloqueios técnicos):
 
-      1. AUTENTICAÇÃO POR JOGADOR (EA/CG Account)
-         Cada jogador da guilda precisa logar uma vez com sua conta EA no sistema.
-         Isso gera um token de sessão (access token + refresh token) que permite
-         ao servidor agir em nome do jogador.
-         → Implementação: formulário de login no simulador (email/senha EA ou
-           código de autorização OAuth, se a CG disponibilizar). Os tokens ficam
-           armazenados no Cloudflare KV associados ao playerId.
+      BLOQUEIO 1 — Autenticação EA por jogador:
+        Tentativa de implementar fluxo OAuth (PKCE) com JUNO_PC_CLIENT.
+        Problema: JUNO_PC_CLIENT só aceita redirect_uri=qrc:// (URI do EA App
+        desktop), que não funciona em navegador web. A EA bloqueia envio do
+        e-mail de 2FA quando o request vem de IP de servidor (Cloudflare Worker).
+        O cliente EADOTCOM-WEB-SERVER tem redirect_uri web mas é confidencial
+        (exige client_secret que não temos).
+        → Retomar se a EA publicar um cliente OAuth público com redirect web,
+          ou se for possível capturar o token do EA App instalado no PC.
 
-      2. ENDPOINT DE ESCRITA NO COMLINK / WORKER
-         O Cloudflare Worker precisaria de novos endpoints:
-           POST /auth/login        → recebe credenciais EA, retorna token
-           POST /auth/refresh      → renova token expirado
-           POST /platoon/allocate  → recebe lista de alocações, chama API do jogo
-         A chamada real para o jogo seria algo como:
-           POST https://api.swgoh.gg/... (endpoint interno não documentado
-           publicamente — necessita mapeamento via proxy reverso / MITM)
+      BLOQUEIO 2 — Endpoint de escrita do jogo (não documentado):
+        A CG não publica API de escrita para TB. Para descobrir:
+        - Interceptar tráfego do app oficial (Fiddler/mitmproxy) durante
+          alocação manual de platoon → identificar URL, headers, payload.
+        - Risco: endpoint pode mudar com atualizações.
+        → Retomar após resolver o Bloqueio 1.
 
-      3. MAPEAMENTO DO ENDPOINT INTERNO DO JOGO
-         A CG não publica documentação de escrita. Para descobrir o endpoint:
-         - Interceptar tráfego do app oficial (Charles Proxy / mitmproxy no iOS
-           ou Android) durante uma alocação manual de platoon
-         - Identificar método, URL, headers, payload e formato de resposta
-         - Replicar via Fetch no Worker
-         Risco: o endpoint pode mudar com atualizações do jogo.
+      BLOQUEIO 3 — Controle de permissão:
+        Apenas liderança pode executar deploy. Requer lista de allycodes
+        autorizados no KV e verificação no Worker.
+        → Implementação simples após resolver os bloqueios 1 e 2.
 
-      4. CONTROLE DE PERMISSÃO (apenas liderança pode fazer deploy)
-         - Lista de allycodes autorizados (líderes + oficiais) armazenada no KV
-         - Verificação no Worker antes de aceitar chamada de /platoon/allocate
-         - Log de quem fez o deploy e quando
-
-      5. REGRAS DE NEGÓCIO JÁ IMPLEMENTADAS NO SIMULADOR
-         O platoonAllocEngine já tem toda a lógica necessária:
-         - Prioridade por relic mínimo e menor GP
-         - Máx 10 unidades/jogador/planeta
-         - Máx 14/15 por op em planetas não-objetivo
-         - Carry-forward (completa na N+1 o que ficou na N)
-         Essas regras precisariam ser replicadas ou chamadas no Worker antes
-         de submeter as alocações ao jogo.
-
-    RESUMO DO BLOQUEIO:
-    Sem o mapeamento do endpoint interno (item 3) e sem autenticação EA por
-    jogador (item 1), a Opção A não é viável. A Opção B resolve o problema
-    operacional para já, com o oficial gerando as ordens e distribuindo no Discord.
+    NOTA: worker/index.js e ui/authPanel.js já contêm a infraestrutura base
+    (endpoints /auth/popup-init, /auth/callback, /auth/status no Worker;
+    renderEAAuthSection() no frontend). Pronto para retomar quando os bloqueios
+    acima forem resolvidos.
 
 ================================================================================
 BAIXA PRIORIDADE / VISÃO FUTURA

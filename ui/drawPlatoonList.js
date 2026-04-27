@@ -521,15 +521,40 @@ function showPlatoonAllocModal(planets) {
   titleRow.appendChild(closeBtn)
   box.appendChild(titleRow)
 
+  // Toggle: mostrar apenas críticos ou todos
+  var _showAllSlots = false
+
+  var legendRow = document.createElement('div')
+  legendRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;border-top:1px solid #1e293b;padding-top:6px;'
+
   var legend = document.createElement('div')
-  legend.style.cssText = 'font-size:10px;color:#64748b;border-top:1px solid #1e293b;padding-top:6px;'
-  legend.textContent = 'Exibindo apenas slots com ≤' + platoonAllocEngine.SURPLUS_THRESHOLD + ' unidades de sobra. Critério: relic mínimo do tier → menor GP do personagem específico.'
-  box.appendChild(legend)
+  legend.style.cssText = 'font-size:10px;color:#64748b;flex:1;'
+  legend.textContent = 'Apenas slots com ≤' + platoonAllocEngine.SURPLUS_THRESHOLD + ' de sobra. Critério: relic mínimo → menor GP.'
+
+  var toggleBtn = document.createElement('button')
+  toggleBtn.textContent = 'Mostrar todos'
+  toggleBtn.style.cssText = 'font-size:10px;padding:2px 8px;background:#1e293b;border:1px solid #475569;color:#94a3b8;border-radius:4px;cursor:pointer;flex-shrink:0;margin-left:8px;'
+  toggleBtn.onclick = function() {
+    _showAllSlots = !_showAllSlots
+    toggleBtn.textContent = _showAllSlots ? 'Só críticos' : 'Mostrar todos'
+    toggleBtn.style.borderColor = _showAllSlots ? '#60a5fa' : '#475569'
+    toggleBtn.style.color = _showAllSlots ? '#93c5fd' : '#94a3b8'
+    legend.textContent = _showAllSlots
+      ? 'Exibindo todos os slots de todas as ops.'
+      : 'Apenas slots com ≤' + platoonAllocEngine.SURPLUS_THRESHOLD + ' de sobra. Critério: relic mínimo → menor GP.'
+    _rebuildAllocBody(body, planets, alloc, rosterMap, function() { return _showAllSlots })
+  }
+
+  legendRow.appendChild(legend)
+  legendRow.appendChild(toggleBtn)
+  box.appendChild(legendRow)
 
   var body = document.createElement('div')
   body.style.cssText = 'overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;'
 
-  var hasTight = false
+  function _rebuildAllocBody(body, planets, alloc, rosterMap, getShowAll) {
+    body.innerHTML = ''
+    var hasTight = false
 
   planets.forEach(function(planetName) {
     var planetAlloc = alloc[planetName]
@@ -542,12 +567,15 @@ function showPlatoonAllocModal(planets) {
     var tier = (typeof getPlanetTier === 'function') ? getPlanetTier(planetName) : 1
     var relicMin = (typeof TIER_RELIC !== 'undefined') ? TIER_RELIC[tier] || 5 : 5
 
-    // Coletar slots tight de todas as ops
+    // Coletar slots a exibir (todos ou apenas tight, conforme toggle)
     var tightByOp = {}
     Object.keys(planetAlloc).forEach(function(opStr) {
       var op = Number(opStr)
-      var tightSlots = planetAlloc[opStr].filter(function(s) { return s.isTight })
-      if (tightSlots.length > 0) tightByOp[op] = tightSlots
+      var showAll = getShowAll()
+      var slots = showAll
+        ? planetAlloc[opStr]
+        : planetAlloc[opStr].filter(function(s) { return s.isTight })
+      if (slots.length > 0) tightByOp[op] = slots
     })
 
     if (Object.keys(tightByOp).length === 0) return
@@ -655,11 +683,16 @@ function showPlatoonAllocModal(planets) {
   if (!hasTight) {
     var noTight = document.createElement('div')
     noTight.style.cssText = 'color:#4ade80;font-size:12px;padding:12px;text-align:center;'
-    noTight.textContent = '✅ Todos os personagens têm sobra suficiente — nenhum slot crítico.'
+    var showAll = getShowAll()
+    noTight.textContent = showAll
+      ? '✅ Nenhum slot com candidato — sincronize o roster.'
+      : '✅ Todos os personagens têm sobra suficiente — nenhum slot crítico.'
     body.appendChild(noTight)
   }
+  } // fim _rebuildAllocBody
 
   box.appendChild(body)
+  _rebuildAllocBody(body, planets, alloc, rosterMap, function() { return _showAllSlots })
   overlay.appendChild(box)
   document.body.appendChild(overlay)
 }
@@ -773,10 +806,20 @@ function _copyFarmListToClipboard() {
   // 1 personagem por jogador — greedy por ordem de prioridade
   var assignedPlayers = {}  // playerId → unitId já atribuído
   var groupLines = { 1: [], 2: [], 3: [] }
+  var starBlockedLines = []  // jogadores bloqueados por estrelas
+  var parallelFarmLines = [] // personagens lentos de farm
 
   deficits.forEach(function(deficit) {
     var uname = (typeof getUnitName === 'function') ? getUnitName(deficit.unitId) : deficit.unitId
     var relicStr = 'R' + deficit.targetRelic
+
+    // Farm lento: não atribuir como primário — sugerir farm paralelo
+    if (deficit.isSlowFarm) {
+      parallelFarmLines.push(uname + ' ' + relicStr + ' — ' + deficit.planet
+        + ' (farm lento — farme fragmentos em paralelo)')
+      return
+    }
+
     var slotsToFill = deficit.deficit
     var toRequest = slotsToFill + Math.ceil(slotsToFill / 3)
     var assigned = 0
@@ -786,6 +829,16 @@ function _copyFarmListToClipboard() {
       if (assigned >= toRequest) return
       var pid = candidate.playerId
       if (assignedPlayers[pid]) return  // já tem 1 personagem
+
+      // Bloqueado por estrelas: sugerir farm de estrelas, não relic
+      if (candidate.blockedByStars) {
+        var alreadyListed = starBlockedLines.some(function(l) { return l.indexOf(candidate.name) !== -1 && l.indexOf(uname) !== -1 })
+        if (!alreadyListed) {
+          starBlockedLines.push('  • ' + candidate.name + ' — ' + uname
+            + ' (' + candidate.starCount + '★ → 7★ necessário para ' + relicStr + ') · ' + deficit.planet)
+        }
+        return
+      }
 
       assignedPlayers[pid] = deficit.unitId
       assigned++
@@ -817,6 +870,18 @@ function _copyFarmListToClipboard() {
     groupLines[g].forEach(function(l) { lines.push(l) })
     lines.push('')
   })
+
+  if (starBlockedLines.length > 0) {
+    lines.push('⭐ FARM DE ESTRELAS NECESSÁRIO')
+    starBlockedLines.forEach(function(l) { lines.push(l) })
+    lines.push('')
+  }
+
+  if (parallelFarmLines.length > 0) {
+    lines.push('⏳ FARM PARALELO RECOMENDADO')
+    parallelFarmLines.forEach(function(l) { lines.push('  • ' + l) })
+    lines.push('')
+  }
 
   var text = lines.join('\n')
   _showFarmModal(text)
@@ -989,6 +1054,11 @@ function _showSquadFarmModal() {
         lines.push('  Farmar squad: ' + r.membersNeeded.map(function(m) {
           var label = m.name + ' (' + m.current + ' → ' + m.target + ')'
           if (m.isPilot) label += ' [piloto de ' + m.shipName + ']'
+          // Nota quando nave em progresso de estrelas (tem mas < 7★)
+          if (m.isShip && m.shipStars > 0 && m.shipStars < 7) {
+            var remaining = 7 - m.shipStars
+            label += ' [' + remaining + '★ restante' + (remaining > 1 ? 's' : '') + ' — farm de estrelas]'
+          }
           return label
         }).join(', '))
       }

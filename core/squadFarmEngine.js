@@ -247,6 +247,19 @@ var squadFarmEngine = {
     // Penalidade se jornada ainda pendente (maior custo total)
     var score = journeyPending ? baseScore * 0.7 : baseScore
 
+    // Penalidade extra: frota onde o capital (journeyUnit) ainda não chegou em 7★
+    // mas passou o filtro de minJourneyStars (ex: Executor a 5★, precisa de 7★)
+    if (squad.isFleet && squad.journeyUnit && !journeyPending) {
+      var capitalUnit = player.units
+        ? player.units.find(function(u) { return u.base_id === squad.journeyUnit })
+        : null
+      var capitalStars = capitalUnit ? (capitalUnit.rarity || 0) : 0
+      if (capitalStars > 0 && capitalStars < 7) {
+        // Capital existe mas não chegou em 7★ — farm de estrelas pendente, pode demorar meses
+        score = score * (0.4 + capitalStars * 0.08)  // 4★→56%, 5★→72%, 6★→88%
+      }
+    }
+
     return { score: score, journeyPending: journeyPending }
   },
 
@@ -270,22 +283,28 @@ var squadFarmEngine = {
               shipName: (typeof getUnitName === 'function') ? getUnitName(uid) : uid
             })
           } else if (!hasShip) {
+            var shipUnit2 = player.units ? player.units.find(function(u) { return u.base_id === uid }) : null
+            var shipStars2 = shipUnit2 ? (shipUnit2.rarity || 0) : 0
             needed.push({
               unitId: uid, id: uid,
               name:   (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
-              current: relic < 0 ? 'não tem' : (relic + '★'), target: '7★',
-              isShip: true
+              current: shipStars2 > 0 ? (shipStars2 + '★') : 'não tem', target: '7★',
+              isShip: true, shipStars: shipStars2
             })
           }
         } else {
-          var relicStr = relic < 0 ? 'não tem'
-            : squad.isFleet ? (relic + '★') : 'R' + relic
+          var shipUnit3 = squad.isFleet
+            ? (player.units ? player.units.find(function(u) { return u.base_id === uid }) : null)
+            : null
+          var shipStars3 = shipUnit3 ? (shipUnit3.rarity || 0) : 0
+          var relicStr = relic >= 0 ? (squad.isFleet ? (relic + '★') : 'R' + relic)
+            : (shipStars3 > 0 ? (shipStars3 + '★') : 'não tem')
           needed.push({
             unitId: uid, id: uid,
             name:   (typeof getUnitName === 'function') ? getUnitName(uid) : uid,
             current: relicStr,
             target:  squad.isFleet ? '7★' : 'R' + squad.minRelic,
-            isShip:  squad.isFleet && relic < 0
+            isShip:  squad.isFleet, shipStars: shipStars3
           })
         }
       }

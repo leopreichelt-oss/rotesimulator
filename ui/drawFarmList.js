@@ -114,6 +114,8 @@ function drawFarmList() {
   var assignments = result.assignments
   var noProgress = result.noProgress
   var completed = result.completed
+  var starBlockedSuggestions = result.starBlockedSuggestions || []
+  var parallelFarmSuggestions = result.parallelFarmSuggestions || []
 
   // Indexar noProgress por playerId para lookup rápido
   var noProgressIds = {}
@@ -195,7 +197,40 @@ function drawFarmList() {
     return s
   }
 
-  if (priority1.length === 0 && priority2.length === 0 && priority3.length === 0) {
+  // Bloqueados por estrelas
+  if (starBlockedSuggestions.length > 0) {
+    html += '<div style="background:#1c1200;border-radius:6px;border-left:3px solid #fbbf24;padding:8px;margin-bottom:8px;">'
+    html += '<div style="color:#fcd34d;font-weight:bold;font-size:12px;margin-bottom:4px;">⭐ Farm de estrelas necessário</div>'
+    html += '<div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Estes jogadores têm o personagem mas precisam chegar em 7★ antes de relicar.</div>'
+    starBlockedSuggestions.forEach(function(s) {
+      var uname = (typeof getUnitName === 'function') ? getUnitName(s.unitId) : s.unitId
+      html += '<div style="font-size:10px;color:#fcd34d;padding:2px 0 2px 8px;">'
+        + s.playerName + ' — <b>' + uname + '</b>'
+        + ' <span style="color:#64748b;">(' + s.starCount + '★ atual → 7★ necessário para R' + s.targetRelic + ')</span>'
+        + ' · ' + s.planet
+        + '</div>'
+    })
+    html += '</div>'
+  }
+
+  // Farm paralelo — personagens lentos
+  if (parallelFarmSuggestions.length > 0) {
+    html += '<div style="background:#0a1628;border-radius:6px;border-left:3px solid #818cf8;padding:8px;margin-bottom:8px;">'
+    html += '<div style="color:#a5b4fc;font-weight:bold;font-size:12px;margin-bottom:4px;">⏳ Farm paralelo recomendado</div>'
+    html += '<div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Personagens lentos de farm (eventos mensais, ~20 fragmentos/mês). Não são atribuídos como farm principal — comece a farmar fragmentos agora em paralelo.</div>'
+    parallelFarmSuggestions.forEach(function(s) {
+      var uname = (typeof getUnitName === 'function') ? getUnitName(s.unitId) : s.unitId
+      html += '<div style="font-size:10px;color:#a5b4fc;padding:2px 0 2px 8px;">'
+        + '<b>' + uname + '</b>'
+        + ' <span style="color:#64748b;">— faltam ' + s.deficit + ' jogadores em R' + s.targetRelic + ' · ' + s.planet + '</span>'
+        + ' <span style="color:#818cf8;">· farm fragmentos em paralelo</span>'
+        + '</div>'
+    })
+    html += '</div>'
+  }
+
+  if (priority1.length === 0 && priority2.length === 0 && priority3.length === 0
+      && starBlockedSuggestions.length === 0 && parallelFarmSuggestions.length === 0) {
     html += '<div style="color:#4ade80;font-size:11px;padding:8px;">✅ Nenhum farm pendente para os planetas configurados.</div>'
   } else {
     html += _renderGroup(priority1, '🔴 Crítico — Planetas ativos bloqueados', '#f87171', '#fca5a5')

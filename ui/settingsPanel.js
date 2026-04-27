@@ -273,7 +273,9 @@ function renderSettingsPanel() {
     '</div>' +
 
     renderActivityList() +
-    _renderAccountsSection()
+    _renderAccountsSection() +
+
+    ''
 }
 
 // Alterna status de um jogador manualmente (ativo → margem → inativo → ativo)
@@ -424,10 +426,22 @@ function syncGuild() {
 
     settingsState.guildData = guildData
 
+    // Persistir playerId do jogador logado (compartilhado com painel GAC)
+    if (guildData.myPlayerId) {
+      localStorage.setItem('gac_my_player_id', guildData.myPlayerId)
+    }
+
     // Salvar GP real por jogador
     var gpMap = {}
     guildData.members.forEach(function(m) { gpMap[m.playerId] = m.gp || 0 })
     rosterEngine.saveGuildGP(gpMap)
+
+    // Salvar atividade manual ANTES de limpar (para preservar overrides manuais)
+    var previousActivity = {}
+    try {
+      var _ar = localStorage.getItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY))
+      if (_ar) previousActivity = JSON.parse(_ar)
+    } catch(e) {}
 
     // Invalidar roster e cache de batalhas da guilda anterior ANTES de buscar o novo
     // Evita que calculate() e drawPlatoonList() usem dados da guilda errada durante o fetchAll
@@ -436,7 +450,22 @@ function syncGuild() {
     try { localStorage.removeItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY)) } catch(e) {}
 
     // Calcular inativos/margem a partir do lastActivityTime
-    var actStatus = computeActivityStatus(guildData.members)
+    var autoStatus = computeActivityStatus(guildData.members)
+    var autoMap = {}
+    autoStatus.list.forEach(function(p) { autoMap[p.playerId] = p.status })
+
+    // Preservar overrides manuais: se o status anterior era diferente do auto-calculado,
+    // foi definido manualmente → manter (ex: Alastor marcado como inativo antes do sync)
+    var mergedList = autoStatus.list.map(function(p) {
+      var prev = previousActivity[p.playerId]
+      if (prev && prev !== autoMap[p.playerId]) return Object.assign({}, p, { status: prev })
+      return p
+    })
+    var actStatus = {
+      inactive:   mergedList.filter(function(p) { return p.status === 'inativo' }).length,
+      safeMargin: mergedList.filter(function(p) { return p.status === 'margem'  }).length,
+      list: mergedList
+    }
     settingsState.activityStatus = actStatus
 
     // Salvar mapa de atividade persistente

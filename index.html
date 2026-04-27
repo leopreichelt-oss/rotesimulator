@@ -45,11 +45,14 @@
       </div>
 
       <!-- GAC -->
-      <div style="width:220px;background:#1e293b;border:2px solid #334155;border-radius:12px;padding:24px 20px;text-align:center;opacity:0.5;cursor:not-allowed;">
+      <div onclick="selectMode('GAC')"
+           style="width:220px;background:#1e293b;border:2px solid #ffd700;border-radius:12px;padding:24px 20px;cursor:pointer;transition:transform .15s,box-shadow .15s;text-align:center;"
+           onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(255,215,0,0.2)'"
+           onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="font-size:40px;margin-bottom:12px;">🏆</div>
-        <div style="font-size:16px;font-weight:bold;color:#94a3b8;margin-bottom:6px;">GAC</div>
-        <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:16px;">Grand Arena<br>Squads por liga</div>
-        <div style="font-size:12px;color:#475569;">Em breve</div>
+        <div style="font-size:16px;font-weight:bold;color:#ffd700;margin-bottom:6px;">GAC</div>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-bottom:16px;">Grand Arena<br>Defesa e ataque</div>
+        <div style="font-size:12px;color:#4ade80;font-weight:bold;">Acessar →</div>
       </div>
 
       <!-- Modificadores -->
@@ -199,6 +202,108 @@ Briefing para oficiais
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     PAINEL GAC
+     ═══════════════════════════════════════════════════ -->
+<div id="gacPage" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:900;flex-direction:column;overflow:hidden;">
+
+  <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+  <div style="background:#1e293b;border-bottom:1px solid #334155;padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;">
+
+    <!-- Voltar (mesmo padrão 🏠 do ROTE) -->
+    <button onclick="hideGACPanel();showLanding()" title="Voltar à tela inicial"
+            style="font-size:16px;padding:4px 10px;background:transparent;border:1px solid #334155;border-radius:4px;color:#e2e8f0;cursor:pointer;">🏠</button>
+
+    <!-- Sincronizar jogador (mesmo padrão 🔄 do ROTE) -->
+    <button id="gacSyncBtn" onclick="syncGACPlayer()" title="Sincronizar dados do jogador"
+            style="font-size:16px;padding:4px 10px;background:transparent;border:1px solid #334155;border-radius:4px;color:#e2e8f0;cursor:pointer;">🔄</button>
+
+    <!-- Separador -->
+    <div style="width:1px;height:22px;background:#334155;"></div>
+
+    <!-- Título -->
+    <div style="font-size:13px;font-weight:bold;color:#ffd700;white-space:nowrap;">🏆 Grand Arena</div>
+
+    <!-- Nome do jogador -->
+    <div style="font-size:12px;font-weight:bold;color:#e2e8f0;white-space:nowrap;" id="gacPlayerNameDisplay">—</div>
+
+    <!-- Liga (auto-detectada) -->
+    <div style="font-size:11px;color:#fcd34d;white-space:nowrap;" id="gacLeagueDisplay">—</div>
+
+    <!-- Separador -->
+    <div style="width:1px;height:22px;background:#334155;"></div>
+
+    <!-- Toggle 5v5 / 3v3 -->
+    <button id="gacModeBtn_5v5" onclick="gacSetMode('5v5')"
+            style="font-size:11px;padding:3px 10px;border:1px solid #334155;border-radius:4px;cursor:pointer;transition:all .15s;background:transparent;color:#64748b;">5v5</button>
+    <button id="gacModeBtn_3v3" onclick="gacSetMode('3v3')"
+            style="font-size:11px;padding:3px 10px;border:1px solid #334155;border-radius:4px;cursor:pointer;transition:all .15s;background:transparent;color:#64748b;">3v3</button>
+
+    <!-- Spacer -->
+    <div style="flex:1;"></div>
+
+    <!-- Ally code do adversário -->
+    <span style="font-size:11px;color:#64748b;white-space:nowrap;">Adversário:</span>
+    <input id="gacOpponentAllycodeInput" type="text" placeholder="Ally code" maxlength="12"
+           onchange="gacSaveOpponent()" onblur="gacSaveOpponent()"
+           style="width:108px;padding:4px 8px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;font-size:11px;"/>
+    <button id="gacOppSyncBtn" onclick="syncGACOpponent()" title="Carregar roster do adversário"
+            style="font-size:13px;padding:3px 8px;background:transparent;border:1px solid #334155;border-radius:4px;color:#94a3b8;cursor:pointer;">🔄</button>
+
+    <!-- Separador -->
+    <div style="width:1px;height:22px;background:#334155;"></div>
+
+    <!-- Counter Search -->
+    <button onclick="gacShowCounterSearch()" title="Buscar counters por líder defensivo"
+            style="padding:4px 10px;background:transparent;border:1px solid #334155;border-radius:4px;color:#e2e8f0;cursor:pointer;font-size:12px;">🎯 Counters</button>
+
+    <!-- Settings (mesmo padrão do ROTE) -->
+    <button onclick="toggleGACSettings()"
+            style="padding:4px 10px;background:transparent;border:1px solid #334155;border-radius:4px;color:#e2e8f0;cursor:pointer;font-size:12px;">⚙ Settings</button>
+
+    <!-- Painel Settings GAC (flutuante, mesmo padrão do ROTE) -->
+    <div id="gacSettingsPanel" style="display:none;position:absolute;top:46px;right:10px;width:260px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:14px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;">⚙ Configurações GAC</strong>
+        <span onclick="toggleGACSettings()" style="cursor:pointer;color:#94a3b8;font-size:16px;">✕</span>
+      </div>
+      <div id="gacSettingsPanelContent"></div>
+    </div>
+
+  </div><!-- /top bar -->
+
+  <!-- ── Corpo: 3 colunas ──────────────────────────────────────────────────── -->
+  <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+    <!-- Coluna esquerda — Ataque do jogador -->
+    <div style="width:240px;min-width:200px;display:flex;flex-direction:column;border-right:1px solid #334155;background:#0f172a;">
+      <div style="padding:10px 12px;border-bottom:1px solid #1e293b;flex-shrink:0;">
+        <div style="font-size:12px;font-weight:bold;color:#f87171;">⚔ Ataque</div>
+        <div style="font-size:10px;color:#475569;margin-top:2px;">Squads disponíveis para atacar</div>
+      </div>
+      <div id="gacDefList" style="flex:1;overflow-y:auto;padding:10px;"></div>
+    </div>
+
+    <!-- Centro — Mapa GAC -->
+    <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;align-items:center;background:#0a101e;">
+      <div style="width:100%;max-width:900px;">
+        <div id="gacMapInner"></div>
+        <div id="gacStrategyInner"></div>
+      </div>
+    </div>
+
+    <!-- Coluna direita — Adversário -->
+    <div style="width:240px;min-width:200px;display:flex;flex-direction:column;border-left:1px solid #334155;background:#0f172a;">
+      <div style="padding:10px 12px;border-bottom:1px solid #1e293b;flex-shrink:0;">
+        <div id="gacAtkListTitle" style="font-size:12px;font-weight:bold;color:#94a3b8;">👁 Adversário</div>
+        <div id="gacAtkListSubtitle" style="font-size:10px;color:#475569;margin-top:2px;">Sincronize o ally code do adversário</div>
+      </div>
+      <div id="gacAtkList" style="flex:1;overflow-y:auto;padding:10px;"></div>
+    </div>
+
+  </div><!-- /corpo -->
+</div><!-- /gacPage -->
+
 <!-- Modal: Mapa de Batalhas -->
 <div id="battleMapOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;justify-content:center;align-items:center;">
   <div style="background:#1e293b;border:1px solid #475569;border-radius:10px;width:90vw;max-width:1100px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.7);">
@@ -227,6 +332,7 @@ Briefing para oficiais
 <script src="data/missionSquads.js"></script>
 <script src="data/platoonRequirements.js"></script>
 <script src="data/squadMeta.js"></script>
+<script src="data/gacCounters.js"></script>
 <script src="data/journeyReqs.js"></script>
 
 <script src="utils/format.js"></script>
@@ -249,9 +355,11 @@ Briefing para oficiais
 <script src="core/farmEngine.js"></script>
 <script src="core/squadFarmEngine.js"></script>
 <script src="core/platoonAllocEngine.js"></script>
+<script src="core/deployTracker.js"></script>
 
 <script src="ui/drawBattleMap.js"></script>
 <script src="ui/drawPlatoonOrders.js"></script>
+<script src="ui/drawDeployPanel.js"></script>
 <script src="ui/drawPlanetList.js"></script>
 <script src="ui/drawGalaxyMap.js"></script>
 <script src="ui/drawPhaseList.js"></script>
@@ -261,6 +369,8 @@ Briefing para oficiais
 <script src="ui/briefings.js"></script>
 <script src="ui/phaseGuide.js"></script>
 <script src="ui/settingsPanel.js"></script>
+<script src="ui/drawGACPanel.js"></script>
+<script src="ui/authPanel.js"></script>
 
 <script src="app.js"></script>
 </html>
