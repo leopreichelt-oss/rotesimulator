@@ -454,12 +454,18 @@ function syncGuild() {
     var autoMap = {}
     autoStatus.list.forEach(function(p) { autoMap[p.playerId] = p.status })
 
-    // Preservar overrides manuais: se o status anterior era diferente do auto-calculado,
-    // foi definido manualmente → manter (ex: Alastor marcado como inativo antes do sync)
+    // Merge status: usa o mais restritivo entre manual e auto-calculado.
+    // inativo(0) > margem(1) > ativo(2)
+    // Regra: inativo auto sobrepõe ativo manual (jogador realmente inativo);
+    //        inativo manual sobrepõe ativo auto (guild master demotou manualmente).
+    var _statusRank = { inativo: 0, margem: 1, ativo: 2 }
     var mergedList = autoStatus.list.map(function(p) {
       var prev = previousActivity[p.playerId]
-      if (prev && prev !== autoMap[p.playerId]) return Object.assign({}, p, { status: prev })
-      return p
+      if (!prev || prev === autoMap[p.playerId]) return p
+      var autoRank = _statusRank[autoMap[p.playerId]] != null ? _statusRank[autoMap[p.playerId]] : 2
+      var prevRank = _statusRank[prev] != null ? _statusRank[prev] : 2
+      var status = prevRank <= autoRank ? prev : autoMap[p.playerId]
+      return Object.assign({}, p, { status: status })
     })
     var actStatus = {
       inactive:   mergedList.filter(function(p) { return p.status === 'inativo' }).length,
