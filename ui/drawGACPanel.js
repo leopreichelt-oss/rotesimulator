@@ -100,7 +100,7 @@ function syncGACOpponent() {
     var opponent = { name: d.name || code, units: units }
     localStorage.setItem('gac_opponent_data', JSON.stringify(opponent))
     if (btn) { btn.disabled = false; btn.textContent = '🔄' }
-    _renderGACSquadColumns(_gacGetPlayer())
+    _renderGACPanel()
   })
   .catch(function() {
     if (btn) { btn.disabled = false; btn.textContent = '🔄' }
@@ -1050,7 +1050,11 @@ function _renderGACSquadColumns(player, layout) {
     })
   }
   myDef = dedupByLeader(myDef)
-  if (opponent) oppDef = dedupByLeader(oppDef)
+  if (opponent) {
+    oppDef = dedupByLeader(oppDef)
+    // Para o adversário, a coluna de ataque também mostra 1 squad por líder
+    oppAtk = dedupByLeader(oppAtk)
+  }
 
   // Distribuição defesa/ataque: squads 'both' vão para defesa primeiro (até capacidade),
   // o excedente vai para ataque. Squads 'attack' sempre ficam no ataque.
