@@ -111,6 +111,113 @@ function _gacGetOpponent() {
   try { return JSON.parse(localStorage.getItem('gac_opponent_data') || 'null') } catch(e) { return null }
 }
 
+// ── Histórico de defesa do adversário ─────────────────────────────────────────
+// Estrutura: { "allycode": [ { date, squads:[{id,name}] }, ... ] }  (máx 3 entradas)
+
+function _gacOppHistoryKey() {
+  return 'gac_opp_history_v1'
+}
+
+function _gacLoadOppHistory(allycode) {
+  try {
+    var all = JSON.parse(localStorage.getItem(_gacOppHistoryKey()) || '{}')
+    return all[allycode] || []
+  } catch(e) { return [] }
+}
+
+function _gacSaveOppHistory(allycode, entry) {
+  try {
+    var all = JSON.parse(localStorage.getItem(_gacOppHistoryKey()) || '{}')
+    var list = all[allycode] || []
+    list.unshift(entry)
+    if (list.length > 3) list = list.slice(0, 3)
+    all[allycode] = list
+    localStorage.setItem(_gacOppHistoryKey(), JSON.stringify(all))
+  } catch(e) {}
+}
+
+// Abre modal para registrar quais squads o adversário usou na defesa
+function gacRecordOpponentDefense() {
+  var code = localStorage.getItem('gac_opponent_allycode') || ''
+  var opponent = _gacGetOpponent()
+  if (!code || !opponent) return
+
+  // Construir lista de squads possíveis para o adversário
+  var leagueIdx = GAC_LEAGUE_ORDER.indexOf(_gacLeague)
+  var options = []
+  if (typeof SQUAD_META !== 'undefined') {
+    SQUAD_META.forEach(function(sq) {
+      if (!sq.events || !sq.events.gac) return
+      if (GAC_LEAGUE_ORDER.indexOf(sq.leagueMin) > leagueIdx) return
+      if (sq.isFleet) return
+      if (_gacShouldSkip(sq, opponent)) return
+      if (!_gacSquadComplete(sq, opponent)) return
+      // Dedup por líder
+      if (!options.find(function(o) { return o.leader === sq.leader })) {
+        options.push({ id: sq.id, name: sq.name, leader: sq.leader })
+      }
+    })
+  }
+
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)this.remove()">'
+  html += '<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;width:360px;max-height:80vh;overflow-y:auto;">'
+  html += '<div style="font-size:13px;font-weight:bold;color:#e2e8f0;margin-bottom:4px;">📋 Registrar defesa real</div>'
+  html += '<div style="font-size:11px;color:#64748b;margin-bottom:14px;">' + (opponent.name || code) + ' · marque os squads que você viu na defesa</div>'
+
+  html += '<div id="gacRecordList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">'
+  options.forEach(function(opt) {
+    html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;">'
+    html += '<input type="checkbox" data-id="' + opt.id + '" data-name="' + _gacEsc(opt.name) + '" style="accent-color:#6366f1;width:14px;height:14px;">'
+    html += '<span style="font-size:12px;color:#cbd5e1;">' + _gacEsc(_gacShortName(opt.name)) + '</span>'
+    html += '</label>'
+  })
+  html += '</div>'
+
+  html += '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+  html += '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:#334155;color:#94a3b8;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;">Cancelar</button>'
+  html += '<button onclick="_gacConfirmRecordDefense(\'' + code + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:bold;">💾 Salvar</button>'
+  html += '</div>'
+  html += '</div></div>'
+
+  document.body.insertAdjacentHTML('beforeend', html)
+}
+
+function _gacConfirmRecordDefense(allycode) {
+  var checked = document.querySelectorAll('#gacRecordList input[type=checkbox]:checked')
+  var squads = []
+  checked.forEach(function(cb) { squads.push({ id: cb.dataset.id, name: cb.dataset.name }) })
+  if (squads.length === 0) return
+
+  var entry = {
+    date:   new Date().toLocaleDateString('pt-BR'),
+    squads: squads
+  }
+  _gacSaveOppHistory(allycode, entry)
+  document.querySelector('div[style*="position:fixed"][style*="9999"]').remove()
+  _renderGACPanel()
+}
+
+// Renderiza o bloco de histórico de defesa no topo da coluna do adversário
+function _renderOppDefenseHistory(allycode) {
+  if (!allycode) return ''
+  var history = _gacLoadOppHistory(allycode)
+  if (!history.length) return ''
+
+  var html = '<div style="padding:10px 10px 0;">'
+  html += '<div style="font-size:10px;font-weight:bold;color:#f59e0b;letter-spacing:0.5px;margin-bottom:6px;">📋 DEFESAS REGISTRADAS</div>'
+  history.forEach(function(entry) {
+    html += '<div style="background:#1a1200;border:1px solid #854d0e;border-radius:6px;padding:7px 9px;margin-bottom:6px;">'
+    html += '<div style="font-size:10px;color:#f59e0b;margin-bottom:4px;">' + entry.date + '</div>'
+    html += '<div style="display:flex;flex-direction:column;gap:2px;">'
+    entry.squads.forEach(function(sq) {
+      html += '<div style="font-size:11px;color:#fcd34d;">' + _gacEsc(_gacShortName(sq.name)) + '</div>'
+    })
+    html += '</div></div>'
+  })
+  html += '</div>'
+  return html
+}
+
 // ── Sync individual do jogador ────────────────────────────────────────────────
 function syncGACPlayer() {
   var allycode = localStorage.getItem('rote_allycode') || ''
@@ -1092,10 +1199,16 @@ function _renderGACSquadColumns(player, layout) {
   // Coluna direita: squads possíveis do adversário
   var titleEl    = document.getElementById('gacAtkListTitle')
   var subtitleEl = document.getElementById('gacAtkListSubtitle')
+  var oppCode    = localStorage.getItem('gac_opponent_allycode') || ''
   if (opponent) {
-    if (titleEl)    titleEl.textContent = '⚔ Ataque do Adversário'
+    if (titleEl) {
+      titleEl.innerHTML = '⚔ Ataque do Adversário'
+        + ' <button onclick="gacRecordOpponentDefense()" title="Registrar defesa real observada" '
+        + 'style="margin-left:6px;background:#1e293b;border:1px solid #475569;border-radius:4px;'
+        + 'color:#f59e0b;font-size:10px;padding:2px 6px;cursor:pointer;">📋 Registrar defesa</button>'
+    }
     if (subtitleEl) subtitleEl.textContent = (opponent.name || 'Adversário') + ' · squads de ataque'
-    oppEl.innerHTML = _renderSquadCards(oppAtkDisplay, opponent)
+    oppEl.innerHTML = _renderOppDefenseHistory(oppCode) + _renderSquadCards(oppAtkDisplay, opponent)
   } else {
     if (titleEl)    titleEl.textContent = '👁 Adversário'
     if (subtitleEl) subtitleEl.textContent = 'Sincronize o ally code do adversário'
