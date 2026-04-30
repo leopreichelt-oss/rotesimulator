@@ -516,6 +516,8 @@ function syncGuild() {
     try { localStorage.removeItem(rosterEngine._key(rosterEngine.STORAGE_KEY)) } catch(e) {}
     try { localStorage.removeItem(combatEngine._key(combatEngine.STORAGE_KEY)) } catch(e) {}
     try { localStorage.removeItem(rosterEngine._key(rosterEngine.ACTIVITY_KEY)) } catch(e) {}
+    // Remover chave v2 para evitar que migrateFromV2() ressuscite dados velhos durante o sync
+    try { localStorage.removeItem('rote_roster_v2') } catch(e) {}
 
     // Calcular inativos/margem a partir do lastActivityTime
     var autoStatus = computeActivityStatus(guildData.members)

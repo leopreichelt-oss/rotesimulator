@@ -789,13 +789,18 @@ function _copyFarmListToClipboard() {
 
   var now = new Date()
   var dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear()
-  var lines = ['Farm List ROTE — ' + dateStr, '']
+  var lastSync = (typeof rosterEngine !== 'undefined') ? rosterEngine.lastSyncDate() : null
+  var syncInfo = lastSync
+    ? lastSync.toLocaleDateString('pt-BR') + ' ' + lastSync.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : 'desconhecido'
+  var memberCount = Object.keys(rosterMap).length
+  var lines = ['Farm List ROTE — ' + dateStr, 'Roster: ' + memberCount + ' membros ativos | Sync: ' + syncInfo, '']
 
   // Coletar déficits por prioridade via farmEngine se disponível
+  // Usa rosterMap como fullRoster também para garantir que apenas membros atuais apareçam
   var deficits = []
   if (typeof farmEngine !== 'undefined') {
-    var fullRoster = (typeof rosterEngine !== 'undefined') ? rosterEngine.load() : rosterMap
-    deficits = farmEngine.collectAllDeficits(rosterMap, fullRoster)
+    deficits = farmEngine.collectAllDeficits(rosterMap, rosterMap)
   }
 
   if (deficits.length === 0) {
