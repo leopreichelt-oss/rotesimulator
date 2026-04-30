@@ -19,11 +19,15 @@ var guildEngine = {
     })
     .then(function(r) { return r.json() })
     .then(function(player) {
-      var guildId    = player.guildId
-      var guildName  = player.guildName
-      var myPlayerId = player.playerId  // usado para identificar o nível do usuário na guilda
+      // Comlink pode retornar guildId em campos diferentes dependendo da versão
+      var guildId    = player.guildId || (player.guild && player.guild.id) || (player.guildInfo && player.guildInfo.guildId)
+      var guildName  = player.guildName || (player.guild && player.guild.name) || ''
+      var myPlayerId = player.playerId
 
-      if (!guildId) return callback('Jogador não está em uma guilda')
+      console.log('[guildEngine] player response keys:', Object.keys(player))
+      console.log('[guildEngine] guildId:', guildId, '| playerId:', myPlayerId)
+
+      if (!guildId) return callback('Jogador não está em uma guilda (guildId não encontrado — response: ' + JSON.stringify(Object.keys(player)) + ')')
 
       // Passo 2: buscar dados da guilda
       return fetch(COMLINK_URL + '/guild', {
