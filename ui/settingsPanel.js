@@ -517,12 +517,13 @@ function syncGuild() {
 
     // Merge status: usa o mais restritivo entre manual e auto-calculado.
     // inativo(0) > margem(1) > ativo(2)
-    // Regra: inativo auto sobrepõe ativo manual (jogador realmente inativo);
-    //        inativo manual sobrepõe ativo auto (guild master demotou manualmente).
+    // Exceção: margem anterior NÃO persiste se o auto detecta ativo — o jogador voltou a jogar.
+    // Somente inativo manual sobrevive quando o auto detecta ativo.
     var _statusRank = { inativo: 0, margem: 1, ativo: 2 }
     var mergedList = autoStatus.list.map(function(p) {
       var prev = previousActivity[p.playerId]
       if (!prev || prev === autoMap[p.playerId]) return p
+      if (prev === 'margem' && autoMap[p.playerId] === 'ativo') return p  // margem limpa quando ativo
       var autoRank = _statusRank[autoMap[p.playerId]] != null ? _statusRank[autoMap[p.playerId]] : 2
       var prevRank = _statusRank[prev] != null ? _statusRank[prev] : 2
       var status = prevRank <= autoRank ? prev : autoMap[p.playerId]
@@ -610,7 +611,10 @@ function syncGuild() {
             // Atualizar farm list: processa progresso, remove ex-membros e completados
             if (typeof farmEngine !== 'undefined') {
               var activeMap = rosterEngine.loadActive()
-              if (activeMap && Object.keys(activeMap).length) farmEngine.buildFarmList(activeMap)
+              if (activeMap && Object.keys(activeMap).length) {
+                farmEngine.buildFarmList(activeMap)
+                if (typeof drawFarmList === 'function') drawFarmList()
+              }
             }
           }, 1500)
         }
