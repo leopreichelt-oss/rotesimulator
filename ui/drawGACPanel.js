@@ -1080,12 +1080,12 @@ function _renderGACMap(layout, myGround, myFleet, oppGround, oppFleet, player, o
   html += _gacTerritoryBox('T4',    t4, 'blue', false, my.t4,   player,   'me')
   html += '</div>'
 
-  // Vermelho (adversário) — espelhado: T4 fica adjacente ao T4 azul no centro
+  // Vermelho (adversário) — espelhado horizontalmente (FROTA/T2 trocados, T3/T4 mantêm posição)
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:0;">'
   html += _gacTerritoryBox('T2',    t2, 'red', false, opp.t2, opponent, 'opp')
   html += _gacTerritoryBox('FROTA', f,  'red', true,  oppF,   opponent, 'opp')
-  html += _gacTerritoryBox('T4',    t4, 'red', false, opp.t4, opponent, 'opp')
   html += _gacTerritoryBox('T3',    t3, 'red', false, opp.t3, opponent, 'opp')
+  html += _gacTerritoryBox('T4',    t4, 'red', false, opp.t4, opponent, 'opp')
   html += '</div>'
 
   html += '</div>'

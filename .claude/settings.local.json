@@ -12,7 +12,22 @@
       "Bash(where python3:*)",
       "WebFetch(domain:swgoh.gg)",
       "Bash(sed -n '456,470p' \"c:\\\\Users\\\\Bancada02\\\\Documents\\\\simulador rote\\\\rotesimulator\\\\data\\\\platoonRequirements.js\")",
-      "Bash(sed -n '562,580p' \"c:\\\\Users\\\\Bancada02\\\\Documents\\\\simulador rote\\\\rotesimulator\\\\data\\\\platoonRequirements.js\")"
+      "Bash(sed -n '562,580p' \"c:\\\\Users\\\\Bancada02\\\\Documents\\\\simulador rote\\\\rotesimulator\\\\data\\\\platoonRequirements.js\")",
+      "Bash(curl -s -X POST \"https://worker-lively-heart-f0a0.leopreichelt.workers.dev/metadata\" -H \"Content-Type: application/json\" -d '{\"payload\":{}}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('latestGamedataVersion',''\\), d.get\\('latestLocalizationBundleVersion',''\\)\\)\")",
+      "Bash(curl -s -X POST \"https://worker-lively-heart-f0a0.leopreichelt.workers.dev/metadata\" -H \"Content-Type: application/json\" -d \"{\\\\\"payload\\\\\":{}}\")",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{const o=JSON.parse\\(d\\); console.log\\(o.latestGamedataVersion\\);}\\)\")",
+      "WebFetch(domain:worker-lively-heart-f0a0.leopreichelt.workers.dev)",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri 'https://worker-lively-heart-f0a0.leopreichelt.workers.dev/metadata' -Method POST -ContentType 'application/json' -Body '{\\\\\"payload\\\\\":{}}' | Select-Object -ExpandProperty latestGamedataVersion\")",
+      "Bash(powershell -Command ':*)",
+      "Bash(curl -s -X POST \"https://worker-lively-heart-f0a0.leopreichelt.workers.dev/data\" -H \"Content-Type: application/json\" -d \"{\\\\\"payload\\\\\":{\\\\\"version\\\\\":\\\\\"0.39.0:0QZ2Pd21S9KcVGnZo0wvKQ\\\\\"}}\" -o /tmp/gamedata.json)",
+      "Bash(curl -s -X POST \"https://worker-lively-heart-f0a0.leopreichelt.workers.dev/data\" -H \"Content-Type: application/json\" -d \"{\\\\\"payload\\\\\":{\\\\\"version\\\\\":\\\\\"0.39.0:0QZ2Pd21S9KcVGnZo0wvKQ\\\\\"}}\" -o \"C:/temp/gamedata.json\")",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.swgoh.help)",
+      "WebFetch(domain:swgoh.wiki)",
+      "WebFetch(domain:wiki.swgoh.help)",
+      "WebSearch"
     ]
   }
 }
