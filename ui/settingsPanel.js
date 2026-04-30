@@ -546,6 +546,11 @@ function syncGuild() {
             // Recalcular tudo: atualiza mapa, lista de planetas, batalhas e platoons
             if (typeof calculate === 'function') calculate()
             if (typeof drawFarmCritical === 'function') drawFarmCritical()
+            // Atualizar farm list: processa progresso, remove ex-membros e completados
+            if (typeof farmEngine !== 'undefined') {
+              var activeMap = rosterEngine.loadActive()
+              if (activeMap && Object.keys(activeMap).length) farmEngine.buildFarmList(activeMap)
+            }
           }, 1500)
         }
       )

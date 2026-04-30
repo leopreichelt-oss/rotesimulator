@@ -186,8 +186,12 @@ function drawFarmList() {
           ? ' <span style="color:#f87171;font-size:9px;">⚠ sem progresso (' + noProgressIds[pid].daysSince + 'd)</span>'
           : ''
 
+        // Usar nome atual do roster (evita mostrar nomes antigos após mudança)
+        var currentPlayer = Object.values(rosterMap).find(function(p) { return p.playerId === pid || (p.name === e.assignment.playerName) })
+        var displayName = currentPlayer ? currentPlayer.name : e.assignment.playerName
+
         s += '<div style="font-size:10px;color:' + playerColor + ';padding-left:8px;">'
-          + e.assignment.playerName + ' — ' + relicStr2 + stuckTag + '</div>'
+          + displayName + ' — ' + relicStr2 + stuckTag + '</div>'
       })
 
       s += '</div>'
