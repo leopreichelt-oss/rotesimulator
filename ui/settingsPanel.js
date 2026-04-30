@@ -278,6 +278,38 @@ function renderSettingsPanel() {
     ''
 }
 
+// Remove jogador do roster local, activity e farm assignments (sem precisar de sync)
+function removePlayerFromRoster(playerId) {
+  if (!confirm('Remover este jogador do roster local?\nSem um novo sync ele não será restaurado.')) return
+
+  var roster = null
+  try { roster = JSON.parse(localStorage.getItem(rosterEngine._key(rosterEngine.STORAGE_KEY)) || 'null') } catch(e) {}
+  if (roster && roster[playerId]) {
+    delete roster[playerId]
+    try { localStorage.setItem(rosterEngine._key(rosterEngine.STORAGE_KEY), JSON.stringify(roster)) } catch(e) {}
+  }
+
+  var actStatus = settingsState.activityStatus
+  if (actStatus) {
+    actStatus.list = actStatus.list.filter(function(p) { return p.playerId !== playerId })
+    actStatus.inactive   = actStatus.list.filter(function(p) { return p.status === 'inativo' }).length
+    actStatus.safeMargin = actStatus.list.filter(function(p) { return p.status === 'margem'  }).length
+    settingsState.activityStatus = actStatus
+    _saveAndApplyActivity(actStatus)
+  }
+
+  if (typeof farmEngine !== 'undefined') {
+    var assignments = farmEngine.loadAssignments()
+    if (assignments[playerId]) {
+      delete assignments[playerId]
+      farmEngine.saveAssignments(assignments)
+    }
+  }
+
+  renderSettingsPanel()
+  if (typeof drawFarmCritical === 'function') drawFarmCritical()
+}
+
 // Alterna status de um jogador manualmente (ativo → margem → inativo → ativo)
 function togglePlayerStatus(playerId) {
   var actStatus = settingsState.activityStatus
@@ -362,6 +394,17 @@ function renderActivityList() {
   var status = settingsState.activityStatus
   if (!status || !status.list.length) return ''
 
+  var allRows = status.list.slice()
+    .sort(function(a, b) { return (a.name || '').localeCompare(b.name || '') })
+    .map(function(p) {
+      var pid = p.playerId ? p.playerId.replace(/'/g, "\\'") : ''
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;">' +
+        '<span style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">' + p.name + '</span>' +
+        '<button onclick="removePlayerFromRoster(\'' + pid + '\')" title="Remover do roster local"' +
+          ' style="font-size:13px;color:#ef4444;background:none;border:none;cursor:pointer;padding:0 4px;line-height:1;">×</button>' +
+      '</div>'
+    }).join('')
+
   return '<div style="margin-top:12px;border-top:1px solid #334155;padding-top:10px;">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
       '<span style="font-size:12px;color:#94a3b8;">Atividade dos jogadores</span>' +
@@ -369,6 +412,11 @@ function renderActivityList() {
     '</div>' +
     '<div id="activityListContainer" style="max-height:200px;overflow-y:auto;">' + _buildActivityRows(status) + '</div>' +
     '<div style="font-size:10px;color:#475569;margin-top:4px;">Auto: &gt;3d=inativo, 1–3d=margem &nbsp;|&nbsp; Clique no status para alterar</div>' +
+    '<details style="margin-top:8px;">' +
+      '<summary style="font-size:11px;color:#64748b;cursor:pointer;user-select:none;">🗑 Remover jogadores do roster local</summary>' +
+      '<div style="font-size:10px;color:#475569;margin:4px 0 6px;">Remove ex-membros ou jogadores incorretos sem precisar de um novo sync.</div>' +
+      '<div style="max-height:180px;overflow-y:auto;">' + allRows + '</div>' +
+    '</details>' +
   '</div>'
 }
 
@@ -435,6 +483,19 @@ function syncGuild() {
     var gpMap = {}
     guildData.members.forEach(function(m) { gpMap[m.playerId] = m.gp || 0 })
     rosterEngine.saveGuildGP(gpMap)
+
+    // Purgar ex-membros dos farm assignments imediatamente (não espera o fetchAll)
+    // Garante remoção mesmo se o sync de roster falhar depois
+    var _curIds = {}
+    guildData.members.forEach(function(m) { _curIds[m.playerId] = true })
+    if (typeof farmEngine !== 'undefined') {
+      var _prevA = farmEngine.loadAssignments()
+      var _changed = false
+      Object.keys(_prevA).forEach(function(pid) {
+        if (!_curIds[pid]) { delete _prevA[pid]; _changed = true }
+      })
+      if (_changed) farmEngine.saveAssignments(_prevA)
+    }
 
     // Salvar atividade manual ANTES de limpar (para preservar overrides manuais)
     var previousActivity = {}
