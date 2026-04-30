@@ -413,13 +413,24 @@ var farmEngine = {
     var finalAssignments = {}
 
     // Manter assignments em progresso (exceto personagens lentos e bloqueados por estrelas)
+    // Atualiza playerName para refletir mudanças de nick no roster atual
     filteredInProgress.forEach(function(p) {
-      finalAssignments[p.playerId] = storedAll[p.playerId]
+      var stored = storedAll[p.playerId]
+      if (stored && rosterMap[p.playerId] && rosterMap[p.playerId].name !== stored.playerName) {
+        stored = Object.assign({}, stored, { playerName: rosterMap[p.playerId].name })
+      }
+      finalAssignments[p.playerId] = stored
     })
 
     // Adicionar novos
     Object.keys(newAssignments).forEach(function(pid) {
       finalAssignments[pid] = newAssignments[pid]
+    })
+
+    // Filtro defensivo: descartar qualquer assignment de jogador que não está no roster ativo.
+    // Garante que ex-membros não persistam mesmo que tenham escapado do cleanup anterior.
+    Object.keys(finalAssignments).forEach(function(pid) {
+      if (!rosterMap[pid]) delete finalAssignments[pid]
     })
 
     farmEngine.saveAssignments(finalAssignments)
