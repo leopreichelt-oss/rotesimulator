@@ -504,6 +504,13 @@ function syncGuild() {
       if (_ar) previousActivity = JSON.parse(_ar)
     } catch(e) {}
 
+    // Guardar snapshot do roster anterior para diagnóstico pós-sync
+    var _prevRosterForDiag = {}
+    try {
+      var _pr = localStorage.getItem(rosterEngine._key(rosterEngine.STORAGE_KEY))
+      if (_pr) _prevRosterForDiag = JSON.parse(_pr)
+    } catch(e) {}
+
     // Invalidar roster e cache de batalhas da guilda anterior ANTES de buscar o novo
     // Evita que calculate() e drawPlatoonList() usem dados da guilda errada durante o fetchAll
     try { localStorage.removeItem(rosterEngine._key(rosterEngine.STORAGE_KEY)) } catch(e) {}
@@ -517,13 +524,13 @@ function syncGuild() {
 
     // Merge status: usa o mais restritivo entre manual e auto-calculado.
     // inativo(0) > margem(1) > ativo(2)
-    // Exceção: margem anterior NÃO persiste se o auto detecta ativo — o jogador voltou a jogar.
-    // Somente inativo manual sobrevive quando o auto detecta ativo.
+    // Se o auto detecta ativo (< 1 dia de atividade), SEMPRE limpa — jogador voltou a jogar.
+    // Nenhum status anterior (margem ou inativo) sobrevive a um auto-ativo real.
     var _statusRank = { inativo: 0, margem: 1, ativo: 2 }
     var mergedList = autoStatus.list.map(function(p) {
       var prev = previousActivity[p.playerId]
       if (!prev || prev === autoMap[p.playerId]) return p
-      if (prev === 'margem' && autoMap[p.playerId] === 'ativo') return p  // margem limpa quando ativo
+      if (autoMap[p.playerId] === 'ativo') return p  // jogador ativo: sempre limpa status anterior
       var autoRank = _statusRank[autoMap[p.playerId]] != null ? _statusRank[autoMap[p.playerId]] : 2
       var prevRank = _statusRank[prev] != null ? _statusRank[prev] : 2
       var status = prevRank <= autoRank ? prev : autoMap[p.playerId]
@@ -598,7 +605,16 @@ function syncGuild() {
             }
           }
 
-          setSyncProgress('✅ Sincronizado! ' + Object.keys(rosterMap).length + ' jogadores', 100)
+          // Diagnóstico: mostra quem foi removido do roster anterior
+          var prevRosterKeys = Object.keys(typeof _prevRosterForDiag !== 'undefined' ? _prevRosterForDiag : {})
+          var newRosterKeys  = Object.keys(rosterMap)
+          var removedNames   = prevRosterKeys
+            .filter(function(pid) { return !rosterMap[pid] })
+            .map(function(pid) { return (_prevRosterForDiag[pid] && _prevRosterForDiag[pid].name) || pid })
+          var diagMsg = removedNames.length
+            ? ' — removidos: ' + removedNames.join(', ')
+            : ''
+          setSyncProgress('✅ Sincronizado! ' + newRosterKeys.length + ' membros' + diagMsg, 100)
           setTimeout(function() {
             var progress = document.getElementById('syncProgress')
             if (progress) progress.style.display = 'none'
